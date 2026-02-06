@@ -9,7 +9,7 @@ A Python personal AI assistant built on **Letta** (self-hosted) using **Anthropi
 - **Language**: Python 3.11+
 - **Package manager**: uv (no pip, no venv)
 - **Agent backbone**: Letta (self-hosted via Docker)
-- **LLM**: Anthropic Claude (via Letta)
+- **LLM**: Configurable — OpenAI, Anthropic, or Google Gemini (via Letta). Currently `openai/gpt-5.2`.
 - **Database**: PostgreSQL + pgvector (managed by Letta)
 - **Testing**: pytest, pytest-asyncio
 - **Linting**: ruff
@@ -55,11 +55,16 @@ jarvis/
 
 ## Current State
 
-- **Current phase**: 0.0 (Meta) — COMPLETE
-- **Next phase**: 0 (Infrastructure)
-- **What exists**: Project skeleton, process docs, no code yet
-- **What's next**: docker-compose.yml, settings.py, agent factory, Makefile, first tests
+- **Current phase**: 0 (Infrastructure) — COMPLETE
+- **Next phase**: 1 (Core Loop + CLI Channel)
+- **What exists**: Docker Compose (Letta + PostgreSQL/pgvector), settings.py, agent factory, persona blocks, Makefile, seed/healthcheck scripts, 13 unit + 4 integration tests — all passing
+- **What's next**: Channel ABC, MessageRouter, response extraction, CLI channel, app orchestrator, `__main__.py` entry point
 
 ## Known Gotchas
 
-_(Updated after each phase retro)_
+- **Letta pagination**: `client.agents.list()` returns `SyncArrayPage`, not a list. Use `.items` to get results. Mocks return plain lists, so use `hasattr(page, "items")` guard.
+- **Docker `restart` vs `recreate`**: `docker compose restart` does NOT re-read `env_file`. Use `docker compose up -d --force-recreate` when `.env` changes.
+- **Google/Gemini provider**: Letta does not auto-detect Google. Must register manually via `POST /v1/providers/` with `provider_type: "google_ai"`. OpenAI and Anthropic are auto-synced.
+- **pgvector extension**: Letta crashes on startup without `CREATE EXTENSION IF NOT EXISTS vector;`. The `init.sql` mounted into the PostgreSQL entrypoint handles this.
+- **Hatchling build backend**: Must have `[build-system]` with hatchling and `[tool.hatch.build.targets.wheel] packages = ["src/jarvis"]` for `import jarvis` to work.
+- **Commit style**: No Co-Authored-By lines.
