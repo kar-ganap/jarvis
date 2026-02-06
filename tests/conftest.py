@@ -74,4 +74,19 @@ def mock_letta_client() -> MagicMock:
 
     client.agents.messages.create.return_value = mock_response
 
+    # Mock tool registration — upsert_from_function returns a tool with id/name
+    _tool_counter = iter(range(100))
+
+    def _mock_upsert(func):
+        idx = next(_tool_counter)
+        tool = MagicMock()
+        tool.id = f"tool-{func.__name__}-{idx}"
+        tool.name = func.__name__
+        return tool
+
+    client.tools.upsert_from_function.side_effect = _mock_upsert
+
+    # agents.tools.list() returns empty by default (no tools attached yet)
+    client.agents.tools.list.return_value = []
+
     return client
