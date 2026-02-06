@@ -4,6 +4,8 @@ import structlog
 
 from jarvis.agent.persona import build_human_block, build_persona_block
 from jarvis.settings import JarvisSettings
+from jarvis.tools import file_ops, shell, web_search
+from jarvis.tools.registry import collect_tools, register_tools, sync_agent_tools
 
 log = structlog.get_logger()
 
@@ -15,11 +17,16 @@ def get_or_create_agent(client, settings: JarvisSettings):
     """
     name = settings.agent.name
 
+    # Register tools with Letta (idempotent)
+    tool_funcs = collect_tools(shell, web_search, file_ops)
+    tool_ids = register_tools(client, tool_funcs)
+
     page = client.agents.list(name=name)
     # Handle both paginated (real client) and plain list (mock) returns
     existing = page.items if hasattr(page, "items") else page
     if existing:
         log.info("agent.found_existing", name=name, agent_id=existing[0].id)
+        sync_agent_tools(client, existing[0].id, tool_ids)
         return existing[0]
 
     persona_text = build_persona_block(agent_name=name)
@@ -42,6 +49,7 @@ def get_or_create_agent(client, settings: JarvisSettings):
                 "description": "Information about the user — preferences, context, and history.",
             },
         ],
+        tool_ids=tool_ids,
         include_base_tools=True,
     )
 

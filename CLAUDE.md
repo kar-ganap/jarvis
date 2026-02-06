@@ -55,10 +55,10 @@ jarvis/
 
 ## Current State
 
-- **Current phase**: 1 (Core Loop + CLI Channel) — COMPLETE
-- **Next phase**: 2 (First Tools — Shell + Web Search + File Ops)
-- **What exists**: Full message loop working end-to-end. Channel ABC (`base.py`), `MessageRouter`, `extract_assistant_text()`, `CLIChannel`, `JarvisApp` orchestrator, `__main__.py` entry point. `uv run python -m jarvis` starts interactive conversation with the agent.
-- **What's next**: Tool registry pattern, shell/web-search/file-ops tools, register tools during agent creation
+- **Current phase**: 2 (First Tools — Shell + Web Search + File Ops) — COMPLETE
+- **Next phase**: 3 (Slack Channel)
+- **What exists**: Full message loop + 3 tool categories. Tool registry (`collect_tools`, `register_tools`, `sync_agent_tools`), `execute_shell_command`, `web_search` (Tavily), `read_file`/`write_file`/`list_directory`. Agent autonomously uses tools when asked. 50 unit + 7 integration tests — all passing.
+- **What's next**: Slack channel (Socket Mode), channel registry for enabled channels from config
 
 ## Known Gotchas
 
@@ -67,4 +67,5 @@ jarvis/
 - **Google/Gemini provider**: Letta does not auto-detect Google. Must register manually via `POST /v1/providers/` with `provider_type: "google_ai"`. OpenAI and Anthropic are auto-synced.
 - **pgvector extension**: Letta crashes on startup without `CREATE EXTENSION IF NOT EXISTS vector;`. The `init.sql` mounted into the PostgreSQL entrypoint handles this.
 - **Hatchling build backend**: Must have `[build-system]` with hatchling and `[tool.hatch.build.targets.wheel] packages = ["src/jarvis"]` for `import jarvis` to work.
+- **Letta tool type hints**: Schema generation rejects union types (`str | None`, `Optional[str]`). Use only primitive types (`str`, `int`, `bool`, `float`) with simple defaults (e.g., `workdir: str = ""`).
 - **Commit style**: No Co-Authored-By lines.
