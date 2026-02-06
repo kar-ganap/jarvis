@@ -62,7 +62,7 @@ class TestHandleInbound:
         call_kwargs = mock_letta_client.agents.messages.create.call_args.kwargs
         assert call_kwargs["agent_id"] == "agent-test-12345"
         sent_content = call_kwargs["messages"][0]["content"]
-        assert sent_content == "[cli|Kartik] hello"
+        assert sent_content == "[cli|u1|Kartik] hello"
 
     def test_sends_reply_to_channel(
         self, router, mock_letta_client: MagicMock, mock_channel: AsyncMock

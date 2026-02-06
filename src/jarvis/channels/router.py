@@ -31,7 +31,10 @@ class MessageRouter:
 
     async def handle_inbound(self, message: ChannelMessage) -> None:
         """Process an inbound message: format, send to Letta, reply to channel."""
-        prefixed = f"[{message.channel_type}|{message.user.display_name}] {message.text}"
+        chan = message.channel_type
+        uid = message.user.id
+        name = message.user.display_name
+        prefixed = f"[{chan}|{uid}|{name}] {message.text}"
 
         log.info(
             "router.inbound",

@@ -15,3 +15,7 @@ slack:
   enabled: true
   bot_token: ""   # Set via SLACK_BOT_TOKEN env var
   app_token: ""   # Set via SLACK_APP_TOKEN env var
+
+http:
+  port: 9100
+  host: "0.0.0.0"
