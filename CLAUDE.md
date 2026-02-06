@@ -55,10 +55,10 @@ jarvis/
 
 ## Current State
 
-- **Current phase**: 0 (Infrastructure) — COMPLETE
-- **Next phase**: 1 (Core Loop + CLI Channel)
-- **What exists**: Docker Compose (Letta + PostgreSQL/pgvector), settings.py, agent factory, persona blocks, Makefile, seed/healthcheck scripts, 13 unit + 4 integration tests — all passing
-- **What's next**: Channel ABC, MessageRouter, response extraction, CLI channel, app orchestrator, `__main__.py` entry point
+- **Current phase**: 1 (Core Loop + CLI Channel) — COMPLETE
+- **Next phase**: 2 (First Tools — Shell + Web Search + File Ops)
+- **What exists**: Full message loop working end-to-end. Channel ABC (`base.py`), `MessageRouter`, `extract_assistant_text()`, `CLIChannel`, `JarvisApp` orchestrator, `__main__.py` entry point. `uv run python -m jarvis` starts interactive conversation with the agent.
+- **What's next**: Tool registry pattern, shell/web-search/file-ops tools, register tools during agent creation
 
 ## Known Gotchas
 
