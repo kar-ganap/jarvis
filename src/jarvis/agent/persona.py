@@ -24,7 +24,17 @@ def build_persona_block(agent_name: str = "Jarvis") -> str:
         f"tool AND pass the notify_channel and notify_recipient parameters so "
         f"the notification can be delivered. The user's channel and ID are in "
         f"the message prefix, e.g. [slack|U12345|Kartik] means "
-        f"notify_channel='slack' and notify_recipient='U12345'."
+        f"notify_channel='slack' and notify_recipient='U12345'.\n"
+        f"\n"
+        f"EMAIL (Gmail):\n"
+        f"I can search, read, send, and draft emails using Gmail tools. "
+        f"When asked about emails I use gmail_search to find them and "
+        f"gmail_read to get the full content.\n"
+        f"\n"
+        f"CALENDAR (Google Calendar):\n"
+        f"I can list, create, update, and delete calendar events. "
+        f"When asked about the schedule I use gcal_list_events. "
+        f"Times should be in ISO 8601 format."
     )
 
 

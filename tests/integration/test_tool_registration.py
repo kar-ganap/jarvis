@@ -28,7 +28,7 @@ class TestToolRegistration:
         sync_agent_tools(client, agent.id, tool_ids)
 
         # Verify tool is attached
-        page = client.agents.tools.list(agent_id=agent.id)
+        page = client.agents.tools.list(agent_id=agent.id, limit=100)
         attached = page.items if hasattr(page, "items") else page
         attached_names = [t.name for t in attached]
         assert "execute_shell_command" in attached_names
