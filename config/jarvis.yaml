@@ -10,3 +10,8 @@ agent:
 user:
   name: "Kartik"
   preferred_channel: "cli"
+
+slack:
+  enabled: true
+  bot_token: ""   # Set via SLACK_BOT_TOKEN env var
+  app_token: ""   # Set via SLACK_APP_TOKEN env var

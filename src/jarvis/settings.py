@@ -25,10 +25,17 @@ class UserSettings(BaseModel):
     preferred_channel: str = "cli"
 
 
+class SlackSettings(BaseModel):
+    enabled: bool = False
+    bot_token: str = ""
+    app_token: str = ""
+
+
 class JarvisSettings(BaseModel):
     letta: LettaSettings = LettaSettings()
     agent: AgentSettings = AgentSettings()
     user: UserSettings = UserSettings()
+    slack: SlackSettings = SlackSettings()
 
 
 def load_settings(config_path: Path | None = None) -> JarvisSettings:
@@ -48,8 +55,17 @@ def load_settings(config_path: Path | None = None) -> JarvisSettings:
 
     raw = yaml.safe_load(config_path.read_text()) or {}
 
+    slack_raw = raw.get("slack") or {}
+    slack = SlackSettings(**slack_raw)
+    # Fall back to env vars for tokens if not set in YAML
+    if not slack.bot_token:
+        slack.bot_token = os.environ.get("SLACK_BOT_TOKEN", "")
+    if not slack.app_token:
+        slack.app_token = os.environ.get("SLACK_APP_TOKEN", "")
+
     return JarvisSettings(
         letta=LettaSettings(**(raw.get("letta") or {})),
         agent=AgentSettings(**(raw.get("agent") or {})),
         user=UserSettings(**(raw.get("user") or {})),
+        slack=slack,
     )

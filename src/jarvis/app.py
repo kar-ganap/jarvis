@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+
 import structlog
 from letta_client import Letta
 
 from jarvis.agent.factory import get_or_create_agent
-from jarvis.channels.base import ChannelType
-from jarvis.channels.cli import CLIChannel
+from jarvis.channels.registry import ChannelRegistry
 from jarvis.channels.router import MessageRouter
 from jarvis.settings import JarvisSettings
 
@@ -26,8 +27,7 @@ class JarvisApp:
         agent = get_or_create_agent(client, self.settings)
         log.info("app.agent_ready", agent_id=agent.id)
 
-        cli = CLIChannel(user_name=self.settings.user.name)
-        channels = {ChannelType.CLI: cli}
+        channels = ChannelRegistry.build(self.settings)
 
         router = MessageRouter(
             client=client,
@@ -35,7 +35,12 @@ class JarvisApp:
             channels=channels,
         )
 
-        await cli.start(on_message=router.handle_inbound)
+        # Start all channels concurrently
+        tasks = [
+            asyncio.create_task(ch.start(on_message=router.handle_inbound))
+            for ch in channels.values()
+        ]
+        await asyncio.gather(*tasks)
 
     async def stop(self) -> None:
         """Graceful shutdown."""
