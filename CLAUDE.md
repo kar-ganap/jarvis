@@ -55,10 +55,10 @@ jarvis/
 
 ## Current State
 
-- **Current phase**: 2 (First Tools — Shell + Web Search + File Ops) — COMPLETE
-- **Next phase**: 3 (Slack Channel)
-- **What exists**: Full message loop + 3 tool categories. Tool registry (`collect_tools`, `register_tools`, `sync_agent_tools`), `execute_shell_command`, `web_search` (Tavily), `read_file`/`write_file`/`list_directory`. Agent autonomously uses tools when asked. 50 unit + 7 integration tests — all passing.
-- **What's next**: Slack channel (Socket Mode), channel registry for enabled channels from config
+- **Current phase**: 3 (Slack Channel) — COMPLETE
+- **Next phase**: 4 (Scheduler + Proactive Messaging)
+- **What exists**: Full message loop + tools + Slack. `SlackChannel` (Socket Mode), `ChannelRegistry` (dynamic channel building from config), env var fallback for tokens. CLI + Slack run concurrently. 61 unit + 9 integration tests — all passing.
+- **What's next**: APScheduler engine, proactive messaging, internal HTTP server, scheduler/messaging tools
 
 ## Known Gotchas
 
