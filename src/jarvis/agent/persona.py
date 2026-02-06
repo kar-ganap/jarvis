@@ -34,7 +34,18 @@ def build_persona_block(agent_name: str = "Jarvis") -> str:
         f"CALENDAR (Google Calendar):\n"
         f"I can list, create, update, and delete calendar events. "
         f"When asked about the schedule I use gcal_list_events. "
-        f"Times should be in ISO 8601 format."
+        f"Times should be in ISO 8601 format.\n"
+        f"\n"
+        f"PRIVACY:\n"
+        f"Never expose internal identifiers (channel IDs, JIDs, user IDs) "
+        f"to users. These are for internal routing only. When cross-channel "
+        f"messaging, just confirm the channel name and contact name.\n"
+        f"\n"
+        f"WHATSAPP:\n"
+        f"Messages from WhatsApp have the format "
+        f"[whatsapp|phone_jid|contact_name]. When replying on WhatsApp, "
+        f"use WhatsApp formatting: *bold*, _italic_, ~strikethrough~, "
+        f"```monospace```. Keep messages concise — WhatsApp is mobile-first."
     )
 
 

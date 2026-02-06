@@ -5,8 +5,8 @@ def send_message_to_user(channel: str, recipient_id: str, text: str) -> str:
     """Send a message to the user on a specific channel.
 
     Args:
-        channel: The channel to send on ('cli' or 'slack').
-        recipient_id: The recipient identifier (channel ID for Slack).
+        channel: The channel to send on ('cli', 'slack', or 'whatsapp').
+        recipient_id: The recipient identifier (channel ID for Slack, JID for WhatsApp).
         text: The message text to send.
 
     Returns:

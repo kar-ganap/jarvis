@@ -7,6 +7,7 @@ import structlog
 from letta_client import Letta
 
 from jarvis.agent.factory import get_or_create_agent
+from jarvis.channels.base import ChannelType
 from jarvis.channels.registry import ChannelRegistry
 from jarvis.channels.router import MessageRouter
 from jarvis.http_server import InternalServer
@@ -48,10 +49,12 @@ class JarvisApp:
         trigger = AgentTrigger(client=client, agent_id=agent.id, router=router)
 
         # Internal HTTP server
+        whatsapp_channel = channels.get(ChannelType.WHATSAPP)
         http_server = InternalServer(
             router=router,
             scheduler=scheduler,
             trigger=trigger,
+            whatsapp_channel=whatsapp_channel,
             port=self.settings.http.port,
         )
 
