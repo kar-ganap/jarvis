@@ -31,11 +31,17 @@ class SlackSettings(BaseModel):
     app_token: str = ""
 
 
+class HttpSettings(BaseModel):
+    port: int = 9100
+    host: str = "0.0.0.0"
+
+
 class JarvisSettings(BaseModel):
     letta: LettaSettings = LettaSettings()
     agent: AgentSettings = AgentSettings()
     user: UserSettings = UserSettings()
     slack: SlackSettings = SlackSettings()
+    http: HttpSettings = HttpSettings()
 
 
 def load_settings(config_path: Path | None = None) -> JarvisSettings:
@@ -68,4 +74,5 @@ def load_settings(config_path: Path | None = None) -> JarvisSettings:
         agent=AgentSettings(**(raw.get("agent") or {})),
         user=UserSettings(**(raw.get("user") or {})),
         slack=slack,
+        http=HttpSettings(**(raw.get("http") or {})),
     )

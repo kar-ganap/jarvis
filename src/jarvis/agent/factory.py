@@ -4,7 +4,7 @@ import structlog
 
 from jarvis.agent.persona import build_human_block, build_persona_block
 from jarvis.settings import JarvisSettings
-from jarvis.tools import file_ops, shell, web_search
+from jarvis.tools import file_ops, messaging, scheduler_tool, shell, web_search
 from jarvis.tools.registry import collect_tools, register_tools, sync_agent_tools
 
 log = structlog.get_logger()
@@ -18,7 +18,7 @@ def get_or_create_agent(client, settings: JarvisSettings):
     name = settings.agent.name
 
     # Register tools with Letta (idempotent)
-    tool_funcs = collect_tools(shell, web_search, file_ops)
+    tool_funcs = collect_tools(shell, web_search, file_ops, messaging, scheduler_tool)
     tool_ids = register_tools(client, tool_funcs)
 
     page = client.agents.list(name=name)

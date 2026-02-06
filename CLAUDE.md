@@ -55,10 +55,10 @@ jarvis/
 
 ## Current State
 
-- **Current phase**: 3 (Slack Channel) — COMPLETE
-- **Next phase**: 4 (Scheduler + Proactive Messaging)
-- **What exists**: Full message loop + tools + Slack. `SlackChannel` (Socket Mode), `ChannelRegistry` (dynamic channel building from config), env var fallback for tokens. CLI + Slack run concurrently. 61 unit + 9 integration tests — all passing.
-- **What's next**: APScheduler engine, proactive messaging, internal HTTP server, scheduler/messaging tools
+- **Current phase**: 4 (Scheduler + Proactive Messaging) — COMPLETE
+- **Next phase**: 5 (Gmail + Google Calendar)
+- **What exists**: Full message loop + tools + Slack + scheduler + proactive messaging. `SchedulerEngine` (APScheduler BackgroundScheduler), `AgentTrigger` (dual-path: direct notification + agent memory), `InternalServer` (aiohttp on :9100 with health/outbound/scheduler endpoints), `send_message_to_user` and `create_reminder`/`create_recurring_job`/`list_scheduled_jobs`/`remove_scheduled_job` tools. Message prefix includes raw user ID: `[channel|user_id|display_name]`. 80 unit + 9 integration = 89 tests — all passing. Live Slack round-trip verified: "remind me in 1 minute" → notification arrives.
+- **What's next**: Google OAuth2 flow, Gmail tools, Google Calendar tools, morning briefing cron
 
 ## Known Gotchas
 
@@ -68,4 +68,8 @@ jarvis/
 - **pgvector extension**: Letta crashes on startup without `CREATE EXTENSION IF NOT EXISTS vector;`. The `init.sql` mounted into the PostgreSQL entrypoint handles this.
 - **Hatchling build backend**: Must have `[build-system]` with hatchling and `[tool.hatch.build.targets.wheel] packages = ["src/jarvis"]` for `import jarvis` to work.
 - **Letta tool type hints**: Schema generation rejects union types (`str | None`, `Optional[str]`). Use only primitive types (`str`, `int`, `bool`, `float`) with simple defaults (e.g., `workdir: str = ""`).
+- **AsyncIOScheduler needs event loop**: APScheduler's `AsyncIOScheduler` requires a running event loop at `start()`. Use `BackgroundScheduler` instead, with `_invoke()` wrapper that dispatches async callbacks via `run_coroutine_threadsafe()`.
+- **Trigger dual-path notification**: Agent responses to `[scheduler|system]` messages go nowhere (no channel context). The trigger must send notifications directly via router AND inform the agent for memory.
+- **Persona block updates on running agent**: Changing `persona.py` only affects new agents. Existing agents need `PATCH /v1/blocks/<id>` via Letta API.
+- **Message prefix format**: `[channel|user_id|display_name]` — three fields, pipe-separated. The raw user ID is needed for `send_message_to_user` and `create_reminder` routing.
 - **Commit style**: No Co-Authored-By lines.

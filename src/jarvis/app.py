@@ -8,6 +8,9 @@ from letta_client import Letta
 from jarvis.agent.factory import get_or_create_agent
 from jarvis.channels.registry import ChannelRegistry
 from jarvis.channels.router import MessageRouter
+from jarvis.http_server import InternalServer
+from jarvis.scheduler.engine import SchedulerEngine
+from jarvis.scheduler.triggers import AgentTrigger
 from jarvis.settings import JarvisSettings
 
 log = structlog.get_logger()
@@ -35,10 +38,26 @@ class JarvisApp:
             channels=channels,
         )
 
-        # Start all channels concurrently
+        # Scheduler + trigger
+        scheduler = SchedulerEngine()
+        scheduler.start()
+        trigger = AgentTrigger(client=client, agent_id=agent.id, router=router)
+
+        # Internal HTTP server
+        http_server = InternalServer(
+            router=router,
+            scheduler=scheduler,
+            trigger=trigger,
+            port=self.settings.http.port,
+        )
+
+        # Start HTTP server + all channels concurrently
         tasks = [
-            asyncio.create_task(ch.start(on_message=router.handle_inbound))
-            for ch in channels.values()
+            asyncio.create_task(http_server.start()),
+            *[
+                asyncio.create_task(ch.start(on_message=router.handle_inbound))
+                for ch in channels.values()
+            ],
         ]
         await asyncio.gather(*tasks)
 
