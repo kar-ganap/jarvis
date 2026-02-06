@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 
 import structlog
 from letta_client import Letta
@@ -25,6 +26,9 @@ class JarvisApp:
     async def start(self) -> None:
         """Bootstrap and run the application."""
         log.info("app.starting")
+
+        # Set Google token path for handlers
+        os.environ.setdefault("GOOGLE_TOKEN_PATH", self.settings.google.token_path)
 
         client = Letta(base_url=self.settings.letta.base_url)
         agent = get_or_create_agent(client, self.settings)

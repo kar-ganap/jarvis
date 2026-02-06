@@ -49,3 +49,25 @@ class TestLoadSettings:
 
         settings = load_settings()
         assert settings.agent.name == "env-agent"
+
+    def test_loads_google_settings(self, tmp_path: Path) -> None:
+        """Google settings are loaded from YAML config."""
+        import yaml
+
+        from jarvis.settings import load_settings
+
+        config = {
+            "letta": {},
+            "agent": {},
+            "user": {},
+            "google": {
+                "client_secrets_path": "my_secrets.json",
+                "token_path": "my_token.json",
+            },
+        }
+        config_path = tmp_path / "jarvis.yaml"
+        config_path.write_text(yaml.dump(config))
+
+        settings = load_settings(config_path)
+        assert settings.google.client_secrets_path == "my_secrets.json"
+        assert settings.google.token_path == "my_token.json"

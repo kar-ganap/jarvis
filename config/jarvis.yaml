@@ -19,3 +19,7 @@ slack:
 http:
   port: 9100
   host: "0.0.0.0"
+
+google:
+  client_secrets_path: "gcp_oauth_client_id.json"
+  token_path: "google_token.json"
