@@ -55,12 +55,12 @@ jarvis/
 
 ## Current State
 
-- **Current phase**: 7 (Browser + Notion + Google Slides) — COMPLETE
-- **Next phase**: TBD
-- **What exists**: Full message loop + tools + Slack + WhatsApp + scheduler + proactive messaging + Gmail + Google Calendar + Notion + Google Slides + Browser automation. Node.js Baileys bridge in Docker for WhatsApp Web. HTTP bridge now has 26 endpoints (health, outbound, whatsapp/inbound, 4 scheduler, 4 Gmail, 4 GCal, 4 Slides, 5 Notion, 3 Browser). 30 tools registered with Letta agent. Three active channels: CLI, Slack, WhatsApp. 152 unit + 16 integration = 168 tests — all passing (integration skipped without Letta server).
-- **Browser**: Playwright (headless Chromium), lazy-init singleton. 3 tools: `browser_navigate`, `browser_screenshot`, `browser_extract`. Text truncated to 10k chars.
-- **Notion**: `notion-client` SDK with internal integration token (`NOTION_API_KEY`). 5 tools: `notion_search`, `notion_read_page`, `notion_create_page`, `notion_append_blocks`, `notion_query_database`. Plain text ↔ paragraph blocks.
-- **Google Slides**: Uses existing Google OAuth (added `presentations` + `drive.readonly` scopes). 4 tools: `gslides_list`, `gslides_read`, `gslides_create`, `gslides_add_slide`. User must re-run `scripts/setup_google_oauth.py` for new scopes. **PENDING: Live validation deferred — Google account issues. Must validate before considering Phase 7 fully done.**
+- **Current phase**: 8 (Docker + Monitoring) — COMPLETE
+- **Next phase**: 9 (Google Docs/Sheets + Todoist + Memory & Learning)
+- **What exists**: Full message loop + tools + Slack + WhatsApp + scheduler + proactive messaging + Gmail + Google Calendar + Notion + Google Slides + Browser automation + Monitoring + Docker. HTTP bridge has 28 endpoints (enhanced health, metrics, outbound, whatsapp/inbound, 4 scheduler, 4 Gmail, 4 GCal, 4 Slides, 5 Notion, 3 Browser). 30 tools registered with Letta agent. Three active channels: CLI, Slack, WhatsApp. 186 unit + 16 integration = 202 tests — all passing (integration skipped without Letta server).
+- **Monitoring**: Prometheus metrics (HTTP requests, tool invocations, messages, errors), configurable structlog renderer (console/JSON), aiohttp observability middleware, enhanced `/health` endpoint with Letta connectivity check, `/metrics` endpoint.
+- **Docker**: Multi-stage Dockerfile (python:3.11-slim + Playwright Chromium), `docker-compose.yml` with 4 services (letta_db, letta_server, jarvis, whatsapp_bridge), health checks on all services, `jarvis-docker.yaml` with service discovery hostnames.
+- **Google Slides**: **PENDING: Live validation deferred — Google account issues. Must re-run `scripts/setup_google_oauth.py` and validate before considering Phase 7 fully done.**
 
 ## Known Gotchas
 
@@ -86,5 +86,10 @@ jarvis/
 - **Playwright lazy singleton in tests**: Browser handlers use module-level `_browser`, `_context`, `_pw`. Tests must reset all three to `None` before each test case to avoid state leaks. Mock chain: `sync_playwright()` → `.start()` → pw instance.
 - **Notion `_extract_title` requires `"type": "title"` key**: The Notion API response includes `"type": "title"` in each property dict. Mock data in tests must include this key or title extraction returns `"(untitled)"`.
 - **Slides listing needs Drive API**: The `presentations` scope alone can't list files. Need `drive.readonly` scope + `drive.files().list(q="mimeType='application/vnd.google-apps.presentation'")`.
-- **Integration conftest skips all tests**: `tests/integration/conftest.py` has `pytest_collection_modifyitems` that marks ALL collected items (including unit tests) as skip when Letta is unreachable. Run `tests/unit/` and `tests/integration/` separately to avoid this.
+- **Integration conftest skips all tests**: `tests/integration/conftest.py` has `pytest_collection_modifyitems` that marks ALL collected items (including unit tests) as skip when Letta is unreachable. Fixed to only skip `tests/integration/` items, but keep in mind when adding conftest hooks.
 - **With 30+ tools**: Use `limit=100` on `agents.tools.list()` to get all attached tools (Letta default page size is small).
+- **aiohttp middleware must re-raise `web.HTTPException`**: The observability middleware catches `Exception` for 500 handling, but `web.HTTPNotFound` etc. are exceptions too. Must `except web.HTTPException: raise` before the generic `except Exception`.
+- **aiohttp `content_type` with charset**: `web.Response(content_type="text/plain; charset=utf-8")` raises — charset must not be in the content_type arg. Use `headers={"Content-Type": ...}` instead.
+- **`get_or_create_agent` returns tuple**: `(agent, tool_count)` — only `app.py` calls this, but any test that calls it must unpack.
+- **Prometheus counter testing**: Use delta-based assertions (read before, act, read after). Global registry is shared across tests.
+- **Docker Jarvis config**: Set `JARVIS_CONFIG=/app/config/jarvis-docker.yaml` env var in compose. Uses service names for discovery (letta_server, whatsapp_bridge).

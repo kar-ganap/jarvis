@@ -41,7 +41,7 @@ def get_or_create_agent(client, settings: JarvisSettings):
     if existing:
         log.info("agent.found_existing", name=name, agent_id=existing[0].id)
         sync_agent_tools(client, existing[0].id, tool_ids)
-        return existing[0]
+        return existing[0], len(tool_ids)
 
     persona_text = build_persona_block(agent_name=name)
     human_text = build_human_block(user_name=settings.user.name)
@@ -68,4 +68,4 @@ def get_or_create_agent(client, settings: JarvisSettings):
     )
 
     log.info("agent.created", name=name, agent_id=agent.id)
-    return agent
+    return agent, len(tool_ids)

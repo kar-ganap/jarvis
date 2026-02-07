@@ -57,6 +57,11 @@ class BrowserSettings(BaseModel):
     timeout_ms: int = 30000
 
 
+class MonitoringSettings(BaseModel):
+    metrics_enabled: bool = True
+    log_format: str = "console"
+
+
 class JarvisSettings(BaseModel):
     letta: LettaSettings = LettaSettings()
     agent: AgentSettings = AgentSettings()
@@ -67,6 +72,7 @@ class JarvisSettings(BaseModel):
     google: GoogleSettings = GoogleSettings()
     notion: NotionSettings = NotionSettings()
     browser: BrowserSettings = BrowserSettings()
+    monitoring: MonitoringSettings = MonitoringSettings()
 
 
 def load_settings(config_path: Path | None = None) -> JarvisSettings:
@@ -104,4 +110,5 @@ def load_settings(config_path: Path | None = None) -> JarvisSettings:
         google=GoogleSettings(**(raw.get("google") or {})),
         notion=NotionSettings(**(raw.get("notion") or {})),
         browser=BrowserSettings(**(raw.get("browser") or {})),
+        monitoring=MonitoringSettings(**(raw.get("monitoring") or {})),
     )
