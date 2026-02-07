@@ -17,6 +17,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.modify",
     "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/presentations",
+    "https://www.googleapis.com/auth/drive.readonly",
 ]
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

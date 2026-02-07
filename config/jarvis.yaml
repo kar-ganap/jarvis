@@ -28,3 +28,11 @@ whatsapp:
 google:
   client_secrets_path: "gcp_oauth_client_id.json"
   token_path: "google_token.json"
+
+notion:
+  enabled: false
+
+browser:
+  enabled: true
+  headless: true
+  timeout_ms: 30000
