@@ -40,5 +40,9 @@ token.json
 *.pem
 *.key
 
+# Node.js (WhatsApp bridge)
+node_modules/
+bridge/whatsapp/auth_data/
+
 # Docker
 docker-compose.override.yml

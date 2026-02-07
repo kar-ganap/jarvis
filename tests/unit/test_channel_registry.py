@@ -41,3 +41,35 @@ class TestChannelRegistry:
         # Default settings have slack.enabled=False
         channels = ChannelRegistry.build(test_settings)
         assert ChannelType.SLACK not in channels
+
+    def test_includes_whatsapp_when_enabled(self, tmp_path):
+        import yaml
+
+        from jarvis.channels.base import ChannelType
+        from jarvis.channels.registry import ChannelRegistry
+        from jarvis.settings import load_settings
+
+        config = {
+            "letta": {},
+            "agent": {},
+            "user": {"name": "Test"},
+            "whatsapp": {
+                "enabled": True,
+                "bridge_url": "http://localhost:9120",
+            },
+        }
+        config_path = tmp_path / "jarvis.yaml"
+        config_path.write_text(yaml.dump(config))
+
+        settings = load_settings(config_path)
+        channels = ChannelRegistry.build(settings)
+
+        assert ChannelType.WHATSAPP in channels
+
+    def test_excludes_whatsapp_when_disabled(self, test_settings):
+        from jarvis.channels.base import ChannelType
+        from jarvis.channels.registry import ChannelRegistry
+
+        # Default settings have whatsapp.enabled=False
+        channels = ChannelRegistry.build(test_settings)
+        assert ChannelType.WHATSAPP not in channels

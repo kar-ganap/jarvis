@@ -127,6 +127,59 @@ class TestSchedulerEndpoints:
         assert data["jobs"][0]["id"] == "job-1"
 
 
+class TestWhatsAppWebhook:
+    async def test_whatsapp_inbound_dispatches(self, aiohttp_client):
+        from jarvis.http_server import InternalServer
+
+        mock_whatsapp = AsyncMock()
+        with patch("jarvis.http_server.google_handlers"):
+            server = InternalServer(
+                router=AsyncMock(),
+                scheduler=MagicMock(),
+                trigger=AsyncMock(),
+                whatsapp_channel=mock_whatsapp,
+                port=0,
+            )
+            app = server._build_app()
+            client = await aiohttp_client(app)
+
+        resp = await client.post(
+            "/whatsapp/inbound",
+            json={
+                "sender": "919876543210@s.whatsapp.net",
+                "chat_jid": "919876543210@s.whatsapp.net",
+                "push_name": "Kartik",
+                "text": "hello",
+                "is_group": False,
+                "is_status": False,
+            },
+        )
+        assert resp.status == 200
+        data = await resp.json()
+        assert data["status"] == "ok"
+        mock_whatsapp.dispatch_webhook.assert_called_once()
+
+    async def test_whatsapp_inbound_404_when_not_configured(self, aiohttp_client):
+        from jarvis.http_server import InternalServer
+
+        with patch("jarvis.http_server.google_handlers"):
+            server = InternalServer(
+                router=AsyncMock(),
+                scheduler=MagicMock(),
+                trigger=AsyncMock(),
+                whatsapp_channel=None,
+                port=0,
+            )
+            app = server._build_app()
+            client = await aiohttp_client(app)
+
+        resp = await client.post(
+            "/whatsapp/inbound",
+            json={"sender": "x", "text": "hi"},
+        )
+        assert resp.status == 404
+
+
 class TestGoogleEndpoints:
     async def test_gmail_search_endpoint(self, test_client):
         resp = await test_client.post(

@@ -5,6 +5,7 @@ import structlog
 from jarvis.channels.base import Channel, ChannelType
 from jarvis.channels.cli import CLIChannel
 from jarvis.channels.slack import SlackChannel
+from jarvis.channels.whatsapp import WhatsAppChannel
 from jarvis.settings import JarvisSettings
 
 log = structlog.get_logger()
@@ -29,6 +30,14 @@ class ChannelRegistry:
                 app_token=settings.slack.app_token,
             )
             log.info("registry.slack_enabled")
+
+        # WhatsApp — enabled if configured
+        if settings.whatsapp.enabled:
+            channels[ChannelType.WHATSAPP] = WhatsAppChannel(
+                bridge_url=settings.whatsapp.bridge_url,
+                allow_groups=settings.whatsapp.allow_groups,
+            )
+            log.info("registry.whatsapp_enabled")
 
         log.info(
             "registry.channels_built",

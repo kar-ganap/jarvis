@@ -50,6 +50,30 @@ class TestLoadSettings:
         settings = load_settings()
         assert settings.agent.name == "env-agent"
 
+    def test_loads_whatsapp_settings(self, tmp_path: Path) -> None:
+        """WhatsApp settings are loaded from YAML config."""
+        import yaml
+
+        from jarvis.settings import load_settings
+
+        config = {
+            "letta": {},
+            "agent": {},
+            "user": {},
+            "whatsapp": {
+                "enabled": True,
+                "bridge_url": "http://mybridge:9120",
+                "allow_groups": True,
+            },
+        }
+        config_path = tmp_path / "jarvis.yaml"
+        config_path.write_text(yaml.dump(config))
+
+        settings = load_settings(config_path)
+        assert settings.whatsapp.enabled is True
+        assert settings.whatsapp.bridge_url == "http://mybridge:9120"
+        assert settings.whatsapp.allow_groups is True
+
     def test_loads_google_settings(self, tmp_path: Path) -> None:
         """Google settings are loaded from YAML config."""
         import yaml

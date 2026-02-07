@@ -36,6 +36,12 @@ class HttpSettings(BaseModel):
     host: str = "0.0.0.0"
 
 
+class WhatsAppSettings(BaseModel):
+    enabled: bool = False
+    bridge_url: str = "http://localhost:9120"
+    allow_groups: bool = False
+
+
 class GoogleSettings(BaseModel):
     client_secrets_path: str = "gcp_oauth_client_id.json"
     token_path: str = "google_token.json"
@@ -47,6 +53,7 @@ class JarvisSettings(BaseModel):
     user: UserSettings = UserSettings()
     slack: SlackSettings = SlackSettings()
     http: HttpSettings = HttpSettings()
+    whatsapp: WhatsAppSettings = WhatsAppSettings()
     google: GoogleSettings = GoogleSettings()
 
 
@@ -81,5 +88,6 @@ def load_settings(config_path: Path | None = None) -> JarvisSettings:
         user=UserSettings(**(raw.get("user") or {})),
         slack=slack,
         http=HttpSettings(**(raw.get("http") or {})),
+        whatsapp=WhatsAppSettings(**(raw.get("whatsapp") or {})),
         google=GoogleSettings(**(raw.get("google") or {})),
     )

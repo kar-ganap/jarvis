@@ -19,10 +19,13 @@ class InternalServer:
     Uses AppRunner + TCPSite so it runs non-blocking alongside channels.
     """
 
-    def __init__(self, router, scheduler, trigger, port: int = 9100) -> None:
+    def __init__(
+        self, router, scheduler, trigger, whatsapp_channel=None, port: int = 9100,
+    ) -> None:
         self._router = router
         self._scheduler = scheduler
         self._trigger = trigger
+        self._whatsapp_channel = whatsapp_channel
         self._port = port
 
     def _build_app(self) -> web.Application:
@@ -35,6 +38,8 @@ class InternalServer:
                 web.post("/scheduler/add", self._scheduler_add),
                 web.post("/scheduler/remove", self._scheduler_remove),
                 web.get("/scheduler/list", self._scheduler_list),
+                # WhatsApp webhook
+                web.post("/whatsapp/inbound", self._whatsapp_inbound),
                 # Google API bridge
                 web.post("/google/gmail/search", self._gmail_search),
                 web.post("/google/gmail/read", self._gmail_read),
@@ -107,6 +112,16 @@ class InternalServer:
         """List all scheduled jobs."""
         jobs = self._scheduler.list_jobs()
         return web.json_response({"jobs": jobs})
+
+    # --- WhatsApp webhook ---
+
+    async def _whatsapp_inbound(self, request: web.Request) -> web.Response:
+        """Receive inbound WhatsApp message from the Baileys bridge."""
+        if not self._whatsapp_channel:
+            return web.json_response({"error": "whatsapp not configured"}, status=404)
+        data = await request.json()
+        await self._whatsapp_channel.dispatch_webhook(data)
+        return web.json_response({"status": "ok"})
 
     # --- Google API bridge handlers ---
 

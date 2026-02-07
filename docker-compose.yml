@@ -28,5 +28,20 @@ services:
     environment:
       - LETTA_PG_URI=postgresql://letta:letta@letta_db:5432/letta
 
+  whatsapp_bridge:
+    build:
+      context: ./bridge/whatsapp
+      dockerfile: Dockerfile
+    ports:
+      - "9120:9120"
+    environment:
+      - WHATSAPP_WEBHOOK_URL=http://host.docker.internal:9100/whatsapp/inbound
+      - WHATSAPP_BRIDGE_PORT=9120
+      - WHATSAPP_AUTH_DIR=/data/auth
+    volumes:
+      - whatsapp_auth:/data/auth
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  whatsapp_auth:
