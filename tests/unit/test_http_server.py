@@ -19,7 +19,10 @@ async def test_client(aiohttp_client):
     mock_trigger = AsyncMock()
 
     # Mock Google handlers so tests don't call real APIs
-    with patch("jarvis.http_server.google_handlers") as mock_google:
+    with patch("jarvis.http_server.google_handlers") as mock_google, \
+         patch("jarvis.http_server.slides_handlers") as mock_slides, \
+         patch("jarvis.http_server.notion_handlers") as mock_notion, \
+         patch("jarvis.http_server.browser_handlers") as mock_browser:
         mock_google.gmail_search.return_value = [
             {"id": "m1", "subject": "Test", "from": "a@b.com", "date": "2026-01-01"}
         ]
@@ -39,6 +42,37 @@ async def test_client(aiohttp_client):
             "id": "e1", "html_link": "https://cal/e1"
         }
         mock_google.gcal_delete_event.return_value = {"status": "deleted"}
+        mock_browser.browser_navigate.return_value = {
+            "title": "Example", "url": "https://example.com", "text": "hello",
+        }
+        mock_browser.browser_screenshot.return_value = {
+            "title": "Example", "path": "/tmp/screenshot.png",
+        }
+        mock_browser.browser_extract.return_value = {
+            "text": "Extracted", "count": 1,
+        }
+        mock_notion.notion_search.return_value = [
+            {"id": "page-1", "type": "page", "title": "Notes", "url": ""}
+        ]
+        mock_notion.notion_read_page.return_value = {
+            "id": "page-1", "title": "Notes", "content": "hello",
+        }
+        mock_notion.notion_create_page.return_value = {
+            "id": "new-page", "url": "https://notion.so/new-page",
+        }
+        mock_notion.notion_append_blocks.return_value = {"block_count": 1}
+        mock_notion.notion_query_database.return_value = [
+            {"id": "row-1", "title": "Task 1"}
+        ]
+        mock_slides.gslides_list.return_value = [
+            {"id": "pres1", "name": "Q4 Review", "modified": "2026-01-15", "link": ""}
+        ]
+        mock_slides.gslides_read.return_value = {
+            "id": "pres1", "title": "Q4 Review",
+            "slides": [{"slide_number": 1, "text": "Hello"}],
+        }
+        mock_slides.gslides_create.return_value = {"id": "new-pres", "title": "My Deck"}
+        mock_slides.gslides_add_slide.return_value = {"slide_id": "slide-abc"}
 
         server = InternalServer(
             router=mock_router,
@@ -51,6 +85,9 @@ async def test_client(aiohttp_client):
         client._mock_router = mock_router
         client._mock_scheduler = mock_scheduler
         client._mock_google = mock_google
+        client._mock_slides = mock_slides
+        client._mock_notion = mock_notion
+        client._mock_browser = mock_browser
         yield client
 
 
@@ -132,7 +169,10 @@ class TestWhatsAppWebhook:
         from jarvis.http_server import InternalServer
 
         mock_whatsapp = AsyncMock()
-        with patch("jarvis.http_server.google_handlers"):
+        with patch("jarvis.http_server.google_handlers"), \
+             patch("jarvis.http_server.slides_handlers"), \
+             patch("jarvis.http_server.notion_handlers"), \
+             patch("jarvis.http_server.browser_handlers"):
             server = InternalServer(
                 router=AsyncMock(),
                 scheduler=MagicMock(),
@@ -162,7 +202,10 @@ class TestWhatsAppWebhook:
     async def test_whatsapp_inbound_404_when_not_configured(self, aiohttp_client):
         from jarvis.http_server import InternalServer
 
-        with patch("jarvis.http_server.google_handlers"):
+        with patch("jarvis.http_server.google_handlers"), \
+             patch("jarvis.http_server.slides_handlers"), \
+             patch("jarvis.http_server.notion_handlers"), \
+             patch("jarvis.http_server.browser_handlers"):
             server = InternalServer(
                 router=AsyncMock(),
                 scheduler=MagicMock(),
@@ -178,6 +221,66 @@ class TestWhatsAppWebhook:
             json={"sender": "x", "text": "hi"},
         )
         assert resp.status == 404
+
+
+class TestBrowserEndpoints:
+    async def test_browser_navigate_endpoint(self, test_client):
+        resp = await test_client.post(
+            "/browser/navigate",
+            json={"url": "https://example.com"},
+        )
+        assert resp.status == 200
+        data = await resp.json()
+        assert "title" in data
+
+    async def test_browser_screenshot_endpoint(self, test_client):
+        resp = await test_client.post(
+            "/browser/screenshot",
+            json={"url": "https://example.com"},
+        )
+        assert resp.status == 200
+        data = await resp.json()
+        assert "path" in data
+
+
+class TestNotionEndpoints:
+    async def test_notion_search_endpoint(self, test_client):
+        resp = await test_client.post(
+            "/notion/search",
+            json={"query": "meeting", "max_results": 5},
+        )
+        assert resp.status == 200
+        data = await resp.json()
+        assert "results" in data
+
+    async def test_notion_create_endpoint(self, test_client):
+        resp = await test_client.post(
+            "/notion/create",
+            json={"parent_id": "p1", "title": "New Page", "content": "hello"},
+        )
+        assert resp.status == 200
+        data = await resp.json()
+        assert "id" in data
+
+
+class TestSlidesEndpoints:
+    async def test_gslides_list_endpoint(self, test_client):
+        resp = await test_client.post(
+            "/google/slides/list",
+            json={"max_results": 10},
+        )
+        assert resp.status == 200
+        data = await resp.json()
+        assert "results" in data
+
+    async def test_gslides_create_endpoint(self, test_client):
+        resp = await test_client.post(
+            "/google/slides/create",
+            json={"title": "My Deck"},
+        )
+        assert resp.status == 200
+        data = await resp.json()
+        assert "id" in data
 
 
 class TestGoogleEndpoints:

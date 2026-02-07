@@ -55,11 +55,12 @@ jarvis/
 
 ## Current State
 
-- **Current phase**: 6 (WhatsApp Channel) — COMPLETE
-- **Next phase**: 7 (Browser + Notion)
-- **What exists**: Full message loop + tools + Slack + WhatsApp + scheduler + proactive messaging + Gmail + Google Calendar. Node.js Baileys bridge in Docker for WhatsApp Web. HTTP bridge now has 14 endpoints (health, outbound, whatsapp/inbound, 4 scheduler, 4 Gmail, 4 GCal). Three active channels: CLI, Slack, WhatsApp. Cross-channel memory verified (Slack ↔ WhatsApp). Proactive messaging works across channels. 118 unit + 14 integration = 132 tests — all passing. Live verified: WhatsApp DM → reply, cross-channel memory, proactive reminder on WhatsApp.
-- **What's next**: Browser automation + Notion integration (+ possibly Google Slides)
-- **Roadmap note**: Phase 7 (Browser + Notion) may also include Google Slides integration — same HTTP bridge pattern, needs `presentations` scope added to OAuth. Decide when we get there.
+- **Current phase**: 7 (Browser + Notion + Google Slides) — COMPLETE
+- **Next phase**: TBD
+- **What exists**: Full message loop + tools + Slack + WhatsApp + scheduler + proactive messaging + Gmail + Google Calendar + Notion + Google Slides + Browser automation. Node.js Baileys bridge in Docker for WhatsApp Web. HTTP bridge now has 26 endpoints (health, outbound, whatsapp/inbound, 4 scheduler, 4 Gmail, 4 GCal, 4 Slides, 5 Notion, 3 Browser). 30 tools registered with Letta agent. Three active channels: CLI, Slack, WhatsApp. 152 unit + 16 integration = 168 tests — all passing (integration skipped without Letta server).
+- **Browser**: Playwright (headless Chromium), lazy-init singleton. 3 tools: `browser_navigate`, `browser_screenshot`, `browser_extract`. Text truncated to 10k chars.
+- **Notion**: `notion-client` SDK with internal integration token (`NOTION_API_KEY`). 5 tools: `notion_search`, `notion_read_page`, `notion_create_page`, `notion_append_blocks`, `notion_query_database`. Plain text ↔ paragraph blocks.
+- **Google Slides**: Uses existing Google OAuth (added `presentations` + `drive.readonly` scopes). 4 tools: `gslides_list`, `gslides_read`, `gslides_create`, `gslides_add_slide`. User must re-run `scripts/setup_google_oauth.py` for new scopes. **PENDING: Live validation deferred — Google account issues. Must validate before considering Phase 7 fully done.**
 
 ## Known Gotchas
 
@@ -82,3 +83,8 @@ jarvis/
 - **`source .env` doesn't export**: Use `set -a && source .env && set +a` before `uv run python -m jarvis` so env vars reach child processes.
 - **WhatsApp webhook URL in Docker**: Bridge uses `http://host.docker.internal:9100/whatsapp/inbound`. Works on macOS/Windows Docker Desktop. Linux may need `--add-host` or host network mode.
 - **Agent leaks internal IDs**: Without PRIVACY persona section, agent may expose Slack channel IDs or WhatsApp JIDs to users on other channels. Persona block now includes instructions to never expose internal identifiers.
+- **Playwright lazy singleton in tests**: Browser handlers use module-level `_browser`, `_context`, `_pw`. Tests must reset all three to `None` before each test case to avoid state leaks. Mock chain: `sync_playwright()` → `.start()` → pw instance.
+- **Notion `_extract_title` requires `"type": "title"` key**: The Notion API response includes `"type": "title"` in each property dict. Mock data in tests must include this key or title extraction returns `"(untitled)"`.
+- **Slides listing needs Drive API**: The `presentations` scope alone can't list files. Need `drive.readonly` scope + `drive.files().list(q="mimeType='application/vnd.google-apps.presentation'")`.
+- **Integration conftest skips all tests**: `tests/integration/conftest.py` has `pytest_collection_modifyitems` that marks ALL collected items (including unit tests) as skip when Letta is unreachable. Run `tests/unit/` and `tests/integration/` separately to avoid this.
+- **With 30+ tools**: Use `limit=100` on `agents.tools.list()` to get all attached tools (Letta default page size is small).

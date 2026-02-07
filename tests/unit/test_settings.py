@@ -95,3 +95,45 @@ class TestLoadSettings:
         settings = load_settings(config_path)
         assert settings.google.client_secrets_path == "my_secrets.json"
         assert settings.google.token_path == "my_token.json"
+
+    def test_loads_browser_settings(self, tmp_path: Path) -> None:
+        """Browser settings are loaded from YAML config."""
+        import yaml
+
+        from jarvis.settings import load_settings
+
+        config = {
+            "letta": {},
+            "agent": {},
+            "user": {},
+            "browser": {
+                "enabled": True,
+                "headless": False,
+                "timeout_ms": 60000,
+            },
+        }
+        config_path = tmp_path / "jarvis.yaml"
+        config_path.write_text(yaml.dump(config))
+
+        settings = load_settings(config_path)
+        assert settings.browser.enabled is True
+        assert settings.browser.headless is False
+        assert settings.browser.timeout_ms == 60000
+
+    def test_loads_notion_settings(self, tmp_path: Path) -> None:
+        """Notion settings are loaded from YAML config."""
+        import yaml
+
+        from jarvis.settings import load_settings
+
+        config = {
+            "letta": {},
+            "agent": {},
+            "user": {},
+            "notion": {"enabled": True},
+        }
+        config_path = tmp_path / "jarvis.yaml"
+        config_path.write_text(yaml.dump(config))
+
+        settings = load_settings(config_path)
+        assert settings.notion.enabled is True

@@ -2,7 +2,12 @@ import pytest
 
 
 def pytest_collection_modifyitems(config, items):
-    """Auto-skip integration tests when Letta server is unreachable."""
+    """Auto-skip integration tests when Letta server is unreachable.
+
+    Only marks items under tests/integration/ — unit tests are never skipped.
+    """
+    from pathlib import Path
+
     from jarvis.settings import load_settings
 
     try:
@@ -12,9 +17,11 @@ def pytest_collection_modifyitems(config, items):
         client = Letta(base_url=settings.letta.base_url, timeout=5)
         client.agents.list(limit=1)
     except Exception:
+        integration_dir = str(Path(__file__).resolve().parent)
         skip_marker = pytest.mark.skip(reason="Letta server not reachable")
         for item in items:
-            item.add_marker(skip_marker)
+            if str(Path(item.fspath).resolve()).startswith(integration_dir):
+                item.add_marker(skip_marker)
 
 
 @pytest.fixture()
