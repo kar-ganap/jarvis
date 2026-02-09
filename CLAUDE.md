@@ -57,10 +57,10 @@ jarvis/
 
 - **Current phase**: 8 (Docker + Monitoring) — COMPLETE
 - **Next phase**: 9 (Google Docs/Sheets + Todoist + Memory & Learning)
-- **What exists**: Full message loop + tools + Slack + WhatsApp + scheduler + proactive messaging + Gmail + Google Calendar + Notion + Google Slides + Browser automation + Monitoring + Docker. HTTP bridge has 28 endpoints (enhanced health, metrics, outbound, whatsapp/inbound, 4 scheduler, 4 Gmail, 4 GCal, 4 Slides, 5 Notion, 3 Browser). 30 tools registered with Letta agent. Three active channels: CLI, Slack, WhatsApp. 186 unit + 16 integration = 202 tests — all passing (integration skipped without Letta server).
+- **What exists**: Full message loop + tools + Slack + WhatsApp + scheduler + proactive messaging + Gmail + Google Calendar + Notion + Google Slides + Browser automation + Monitoring + Docker. HTTP bridge has 28 endpoints (enhanced health, metrics, outbound, whatsapp/inbound, 4 scheduler, 4 Gmail, 4 GCal, 4 Slides, 5 Notion, 3 Browser). 30 tools registered with Letta agent. Three active channels: CLI, Slack, WhatsApp. 187 unit + 16 integration = 203 tests — all passing (integration skipped without Letta server).
 - **Monitoring**: Prometheus metrics (HTTP requests, tool invocations, messages, errors), configurable structlog renderer (console/JSON), aiohttp observability middleware, enhanced `/health` endpoint with Letta connectivity check, `/metrics` endpoint.
 - **Docker**: Multi-stage Dockerfile (python:3.11-slim + Playwright Chromium), `docker-compose.yml` with 4 services (letta_db, letta_server, jarvis, whatsapp_bridge), health checks on all services, `jarvis-docker.yaml` with service discovery hostnames.
-- **Google Slides**: **PENDING: Live validation deferred — Google account issues. Must re-run `scripts/setup_google_oauth.py` and validate before considering Phase 7 fully done.**
+- **Google Slides**: Live-validated. All 4 endpoints working (list, create, read, add_slide with text insertion). Fixed `gslides_add_slide` to use `placeholderIdMappings` + `insertText` for title/body.
 
 ## Known Gotchas
 
