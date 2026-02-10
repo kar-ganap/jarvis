@@ -12,6 +12,7 @@ gcp_oauth_client_id.json
 bridge/
 node_modules/
 *.md
+!README.md
 !pyproject.toml
 .ruff_cache
 .mypy_cache
