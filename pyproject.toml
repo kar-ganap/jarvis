@@ -13,6 +13,7 @@ dependencies = [
     "letta-client>=1.7.8",
     "notion-client>=2.2.1",
     "playwright>=1.58.0",
+    "prometheus-client>=0.21.0",
     "pydantic-settings>=2.12.0",
     "pyyaml>=6.0.3",
     "requests>=2.32.5",

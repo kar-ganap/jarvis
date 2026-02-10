@@ -114,3 +114,30 @@ class TestGslidesAddSlide:
 
         assert result["slide_id"] == "slide-abc"
         service.presentations().batchUpdate.assert_called()
+
+    def test_batch_includes_insert_text_requests(self):
+        """batchUpdate body includes insertText for title and body."""
+        from jarvis.google.slides_handlers import gslides_add_slide
+
+        service = _mock_slides_service()
+        service.presentations().batchUpdate().execute.return_value = {
+            "replies": [{"createSlide": {"objectId": "slide-abc"}}]
+        }
+
+        with patch("jarvis.google.slides_handlers.get_credentials"), patch(
+            "jarvis.google.slides_handlers.build", return_value=service
+        ):
+            gslides_add_slide("pres1", "My Title", "My Body")
+
+        call_kwargs = service.presentations().batchUpdate.call_args.kwargs
+        requests = call_kwargs["body"]["requests"]
+
+        # Should have createSlide + 2 insertText requests
+        request_types = [list(r.keys())[0] for r in requests]
+        assert "createSlide" in request_types
+        assert request_types.count("insertText") == 2
+
+        # Verify text content
+        insert_texts = [r["insertText"]["text"] for r in requests if "insertText" in r]
+        assert "My Title" in insert_texts
+        assert "My Body" in insert_texts

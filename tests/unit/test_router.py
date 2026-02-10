@@ -118,3 +118,52 @@ class TestSendProactive:
         outbound = mock_channel.send.call_args[0][0]
         assert outbound.text == "Reminder: check PR"
         assert outbound.channel_type == ChannelType.CLI
+
+
+class TestMessageCounters:
+    def test_inbound_increments_message_counter(
+        self, router, mock_letta_client: MagicMock, mock_channel: AsyncMock
+    ) -> None:
+        """handle_inbound increments MESSAGE_COUNT for inbound direction."""
+        from jarvis.channels.base import ChannelMessage, ChannelType, ChannelUser
+        from jarvis.monitoring.metrics import MESSAGE_COUNT
+
+        mock_letta_client.agents.messages.create.return_value = _make_letta_response(
+            "reply"
+        )
+
+        before = MESSAGE_COUNT.labels(
+            channel="cli", direction="inbound"
+        )._value.get()
+
+        msg = ChannelMessage(
+            channel_type=ChannelType.CLI,
+            user=ChannelUser(id="u1", display_name="Kartik"),
+            text="test",
+        )
+        asyncio.run(router.handle_inbound(msg))
+
+        after = MESSAGE_COUNT.labels(
+            channel="cli", direction="inbound"
+        )._value.get()
+        assert after >= before + 1
+
+    def test_outbound_increments_message_counter(
+        self, router, mock_letta_client: MagicMock, mock_channel: AsyncMock
+    ) -> None:
+        """send_proactive increments MESSAGE_COUNT for outbound direction."""
+        from jarvis.channels.base import ChannelType
+        from jarvis.monitoring.metrics import MESSAGE_COUNT
+
+        before = MESSAGE_COUNT.labels(
+            channel="cli", direction="outbound"
+        )._value.get()
+
+        asyncio.run(
+            router.send_proactive(ChannelType.CLI, "u1", "Hello")
+        )
+
+        after = MESSAGE_COUNT.labels(
+            channel="cli", direction="outbound"
+        )._value.get()
+        assert after >= before + 1

@@ -11,6 +11,7 @@ from jarvis.channels.base import (
     ChannelType,
     OutboundMessage,
 )
+from jarvis.monitoring.metrics import MESSAGE_COUNT
 
 log = structlog.get_logger()
 
@@ -35,6 +36,8 @@ class MessageRouter:
         uid = message.user.id
         name = message.user.display_name
         prefixed = f"[{chan}|{uid}|{name}] {message.text}"
+
+        MESSAGE_COUNT.labels(channel=str(chan), direction="inbound").inc()
 
         log.info(
             "router.inbound",
@@ -63,6 +66,9 @@ class MessageRouter:
         channel = self._channels.get(message.channel_type)
         if channel:
             await channel.send(outbound)
+            MESSAGE_COUNT.labels(
+                channel=str(message.channel_type), direction="outbound",
+            ).inc()
 
     async def send_proactive(
         self, channel_type: ChannelType, recipient_id: str, text: str
@@ -74,3 +80,6 @@ class MessageRouter:
         channel = self._channels.get(channel_type)
         if channel:
             await channel.send(outbound)
+            MESSAGE_COUNT.labels(
+                channel=str(channel_type), direction="outbound",
+            ).inc()

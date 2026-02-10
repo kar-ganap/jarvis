@@ -9,10 +9,11 @@ class TestGetOrCreateAgent:
 
         mock_letta_client.agents.list.return_value = []
 
-        agent = get_or_create_agent(mock_letta_client, test_settings)
+        agent, tool_count = get_or_create_agent(mock_letta_client, test_settings)
 
         mock_letta_client.agents.create.assert_called_once()
         assert agent.id == "agent-test-12345"
+        assert tool_count > 0
 
     def test_returns_existing_agent(
         self, mock_letta_client: MagicMock, test_settings
@@ -24,10 +25,11 @@ class TestGetOrCreateAgent:
         existing_agent.name = "test-jarvis"
         mock_letta_client.agents.list.return_value = [existing_agent]
 
-        agent = get_or_create_agent(mock_letta_client, test_settings)
+        agent, tool_count = get_or_create_agent(mock_letta_client, test_settings)
 
         mock_letta_client.agents.create.assert_not_called()
         assert agent.id == "agent-existing-99999"
+        assert tool_count > 0
 
     def test_passes_settings_to_create(
         self, mock_letta_client: MagicMock, test_settings

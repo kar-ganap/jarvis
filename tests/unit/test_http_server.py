@@ -98,6 +98,78 @@ class TestHealthEndpoint:
         data = await resp.json()
         assert data["status"] == "ok"
 
+    async def test_health_includes_checks(self, test_client):
+        """Enhanced health endpoint includes checks, tool_count, channels."""
+        resp = await test_client.get("/health")
+        data = await resp.json()
+        assert "checks" in data
+        assert "tool_count" in data
+        assert "channels" in data
+        assert "uptime_seconds" in data
+
+    async def test_health_503_when_letta_unreachable(self, aiohttp_client):
+        """Health returns 503 when Letta check fails."""
+        from unittest.mock import patch as _patch
+
+        from jarvis.http_server import InternalServer
+
+        mock_client = MagicMock()
+        mock_client.agents.retrieve.side_effect = ConnectionError("down")
+
+        with _patch("jarvis.http_server.google_handlers"), \
+             _patch("jarvis.http_server.slides_handlers"), \
+             _patch("jarvis.http_server.notion_handlers"), \
+             _patch("jarvis.http_server.browser_handlers"):
+            server = InternalServer(
+                router=AsyncMock(),
+                scheduler=MagicMock(),
+                trigger=AsyncMock(),
+                port=0,
+                letta_client=mock_client,
+                agent_id="agent-123",
+                channel_names=["cli"],
+                tool_count=30,
+            )
+            app = server._build_app()
+            client = await aiohttp_client(app)
+
+        resp = await client.get("/health")
+        assert resp.status == 503
+        data = await resp.json()
+        assert data["status"] == "unhealthy"
+
+
+class TestMetricsEndpoint:
+    async def test_returns_prometheus_format(self, test_client):
+        """GET /metrics returns Prometheus text format."""
+        resp = await test_client.get("/metrics")
+        assert resp.status == 200
+        text = await resp.text()
+        assert "jarvis_" in text
+
+    async def test_metrics_disabled_returns_404(self, aiohttp_client):
+        """When metrics_enabled=False, /metrics returns 404."""
+        from unittest.mock import patch as _patch
+
+        from jarvis.http_server import InternalServer
+
+        with _patch("jarvis.http_server.google_handlers"), \
+             _patch("jarvis.http_server.slides_handlers"), \
+             _patch("jarvis.http_server.notion_handlers"), \
+             _patch("jarvis.http_server.browser_handlers"):
+            server = InternalServer(
+                router=AsyncMock(),
+                scheduler=MagicMock(),
+                trigger=AsyncMock(),
+                port=0,
+                metrics_enabled=False,
+            )
+            app = server._build_app()
+            client = await aiohttp_client(app)
+
+        resp = await client.get("/metrics")
+        assert resp.status == 404
+
 
 class TestOutboundEndpoint:
     async def test_calls_router_send_proactive(self, test_client):

@@ -10,6 +10,8 @@ from jarvis.browser import handlers as browser_handlers
 from jarvis.channels.base import ChannelType
 from jarvis.google import handlers as google_handlers
 from jarvis.google import slides_handlers
+from jarvis.monitoring.health import build_report, check_letta
+from jarvis.monitoring.middleware import observability_middleware
 from jarvis.notion import handlers as notion_handlers
 
 log = structlog.get_logger()
@@ -23,52 +25,68 @@ class InternalServer:
     """
 
     def __init__(
-        self, router, scheduler, trigger, whatsapp_channel=None, port: int = 9100,
+        self,
+        router,
+        scheduler,
+        trigger,
+        whatsapp_channel=None,
+        port: int = 9100,
+        letta_client=None,
+        agent_id: str = "",
+        channel_names: list[str] | None = None,
+        tool_count: int = 0,
+        metrics_enabled: bool = True,
     ) -> None:
         self._router = router
         self._scheduler = scheduler
         self._trigger = trigger
         self._whatsapp_channel = whatsapp_channel
         self._port = port
+        self._letta_client = letta_client
+        self._agent_id = agent_id
+        self._channel_names = channel_names or []
+        self._tool_count = tool_count
+        self._metrics_enabled = metrics_enabled
 
     def _build_app(self) -> web.Application:
         """Build the aiohttp Application (separated for testability)."""
-        app = web.Application()
-        app.add_routes(
-            [
-                web.get("/health", self._health),
-                web.post("/outbound", self._outbound),
-                web.post("/scheduler/add", self._scheduler_add),
-                web.post("/scheduler/remove", self._scheduler_remove),
-                web.get("/scheduler/list", self._scheduler_list),
-                # WhatsApp webhook
-                web.post("/whatsapp/inbound", self._whatsapp_inbound),
-                # Google API bridge
-                web.post("/google/gmail/search", self._gmail_search),
-                web.post("/google/gmail/read", self._gmail_read),
-                web.post("/google/gmail/send", self._gmail_send),
-                web.post("/google/gmail/draft", self._gmail_draft),
-                web.post("/google/gcal/list", self._gcal_list),
-                web.post("/google/gcal/create", self._gcal_create),
-                web.post("/google/gcal/update", self._gcal_update),
-                web.post("/google/gcal/delete", self._gcal_delete),
-                # Notion
-                web.post("/notion/search", self._notion_search),
-                web.post("/notion/read", self._notion_read),
-                web.post("/notion/create", self._notion_create),
-                web.post("/notion/append", self._notion_append),
-                web.post("/notion/query_db", self._notion_query_db),
-                # Google Slides
-                web.post("/google/slides/list", self._gslides_list),
-                web.post("/google/slides/read", self._gslides_read),
-                web.post("/google/slides/create", self._gslides_create),
-                web.post("/google/slides/add_slide", self._gslides_add_slide),
-                # Browser
-                web.post("/browser/navigate", self._browser_navigate),
-                web.post("/browser/screenshot", self._browser_screenshot),
-                web.post("/browser/extract", self._browser_extract),
-            ]
-        )
+        app = web.Application(middlewares=[observability_middleware])
+        routes = [
+            web.get("/health", self._health),
+            web.post("/outbound", self._outbound),
+            web.post("/scheduler/add", self._scheduler_add),
+            web.post("/scheduler/remove", self._scheduler_remove),
+            web.get("/scheduler/list", self._scheduler_list),
+            # WhatsApp webhook
+            web.post("/whatsapp/inbound", self._whatsapp_inbound),
+            # Google API bridge
+            web.post("/google/gmail/search", self._gmail_search),
+            web.post("/google/gmail/read", self._gmail_read),
+            web.post("/google/gmail/send", self._gmail_send),
+            web.post("/google/gmail/draft", self._gmail_draft),
+            web.post("/google/gcal/list", self._gcal_list),
+            web.post("/google/gcal/create", self._gcal_create),
+            web.post("/google/gcal/update", self._gcal_update),
+            web.post("/google/gcal/delete", self._gcal_delete),
+            # Notion
+            web.post("/notion/search", self._notion_search),
+            web.post("/notion/read", self._notion_read),
+            web.post("/notion/create", self._notion_create),
+            web.post("/notion/append", self._notion_append),
+            web.post("/notion/query_db", self._notion_query_db),
+            # Google Slides
+            web.post("/google/slides/list", self._gslides_list),
+            web.post("/google/slides/read", self._gslides_read),
+            web.post("/google/slides/create", self._gslides_create),
+            web.post("/google/slides/add_slide", self._gslides_add_slide),
+            # Browser
+            web.post("/browser/navigate", self._browser_navigate),
+            web.post("/browser/screenshot", self._browser_screenshot),
+            web.post("/browser/extract", self._browser_extract),
+        ]
+        if self._metrics_enabled:
+            routes.append(web.get("/metrics", self._metrics))
+        app.add_routes(routes)
         return app
 
     async def start(self) -> None:
@@ -82,7 +100,27 @@ class InternalServer:
         await asyncio.Event().wait()
 
     async def _health(self, request: web.Request) -> web.Response:
-        return web.json_response({"status": "ok"})
+        checks = []
+        if self._letta_client:
+            letta_check = await check_letta(self._letta_client, self._agent_id)
+            checks.append(letta_check)
+
+        report = build_report(
+            checks,
+            tool_count=self._tool_count,
+            channels=self._channel_names,
+        )
+        status_code = 200 if report["status"] == "ok" else 503
+        return web.json_response(report, status=status_code)
+
+    async def _metrics(self, request: web.Request) -> web.Response:
+        from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+
+        body = generate_latest()
+        return web.Response(
+            body=body,
+            headers={"Content-Type": CONTENT_TYPE_LATEST},
+        )
 
     async def _outbound(self, request: web.Request) -> web.Response:
         """Letta tool calls this to send a message to the user."""

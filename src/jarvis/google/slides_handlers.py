@@ -87,6 +87,8 @@ def gslides_add_slide(
     """Add a new slide with title and body text to a presentation."""
     service = _slides_service()
     slide_id = f"slide_{uuid.uuid4().hex[:8]}"
+    title_id = f"title_{uuid.uuid4().hex[:8]}"
+    body_id = f"body_{uuid.uuid4().hex[:8]}"
 
     requests = [
         {
@@ -95,6 +97,28 @@ def gslides_add_slide(
                 "slideLayoutReference": {
                     "predefinedLayout": "TITLE_AND_BODY",
                 },
+                "placeholderIdMappings": [
+                    {
+                        "layoutPlaceholder": {"type": "TITLE"},
+                        "objectId": title_id,
+                    },
+                    {
+                        "layoutPlaceholder": {"type": "BODY"},
+                        "objectId": body_id,
+                    },
+                ],
+            },
+        },
+        {
+            "insertText": {
+                "objectId": title_id,
+                "text": title,
+            },
+        },
+        {
+            "insertText": {
+                "objectId": body_id,
+                "text": body,
             },
         },
     ]

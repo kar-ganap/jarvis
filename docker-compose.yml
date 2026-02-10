@@ -27,15 +27,48 @@ services:
       - .env
     environment:
       - LETTA_PG_URI=postgresql://letta:letta@letta_db:5432/letta
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8283/v1/health')\""]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+
+  jarvis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      letta_server:
+        condition: service_healthy
+    ports:
+      - "9100:9100"
+    env_file:
+      - .env
+    environment:
+      - JARVIS_CONFIG=/app/config/jarvis-docker.yaml
+    volumes:
+      - ./google_token.json:/app/secrets/google_token.json:ro
+      - ./gcp_oauth_client_id.json:/app/secrets/gcp_oauth_client_id.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:9100/health')\""]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
 
   whatsapp_bridge:
     build:
       context: ./bridge/whatsapp
       dockerfile: Dockerfile
+    depends_on:
+      jarvis:
+        condition: service_healthy
     ports:
       - "9120:9120"
     environment:
-      - WHATSAPP_WEBHOOK_URL=http://host.docker.internal:9100/whatsapp/inbound
+      - WHATSAPP_WEBHOOK_URL=http://jarvis:9100/whatsapp/inbound
       - WHATSAPP_BRIDGE_PORT=9120
       - WHATSAPP_AUTH_DIR=/data/auth
     volumes:

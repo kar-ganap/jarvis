@@ -1,4 +1,4 @@
-.PHONY: test test-all test-int lint typecheck docker-up docker-down run seed health
+.PHONY: test test-all test-int lint typecheck docker-up docker-down docker-build docker-logs run seed health
 
 test:
 	uv run pytest tests/unit/ -v
@@ -20,6 +20,12 @@ docker-up:
 
 docker-down:
 	docker compose down
+
+docker-build:
+	docker compose build jarvis
+
+docker-logs:
+	docker compose logs -f jarvis
 
 run:
 	uv run python -m jarvis

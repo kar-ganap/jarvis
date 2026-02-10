@@ -1,5 +1,5 @@
 letta:
-  base_url: "http://localhost:8283"
+  base_url: "http://letta_server:8283"
 
 agent:
   name: "jarvis"
@@ -9,7 +9,7 @@ agent:
 
 user:
   name: "Kartik"
-  preferred_channel: "cli"
+  preferred_channel: "whatsapp"
 
 slack:
   enabled: true
@@ -22,12 +22,12 @@ http:
 
 whatsapp:
   enabled: true
-  bridge_url: "http://localhost:9120"
+  bridge_url: "http://whatsapp_bridge:9120"
   allow_groups: false
 
 google:
-  client_secrets_path: "gcp_oauth_client_id.json"
-  token_path: "google_token.json"
+  client_secrets_path: "/app/secrets/gcp_oauth_client_id.json"
+  token_path: "/app/secrets/google_token.json"
 
 notion:
   enabled: false
@@ -39,4 +39,4 @@ browser:
 
 monitoring:
   metrics_enabled: true
-  log_format: "console"
+  log_format: "json"

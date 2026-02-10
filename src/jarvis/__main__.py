@@ -9,8 +9,8 @@ from jarvis.utils.logging import setup_logging
 
 
 def main() -> None:
-    setup_logging()
     settings = load_settings()
+    setup_logging(log_format=settings.monitoring.log_format)
     app = JarvisApp(settings)
     try:
         asyncio.run(app.start())
