@@ -11,6 +11,7 @@ from jarvis.channels.base import ChannelType
 from jarvis.channels.registry import ChannelRegistry
 from jarvis.channels.router import MessageRouter
 from jarvis.http_server import InternalServer
+from jarvis.memory.learning import run_learning_cycle
 from jarvis.monitoring.health import mark_started
 from jarvis.scheduler.engine import SchedulerEngine
 from jarvis.scheduler.triggers import AgentTrigger
@@ -50,6 +51,16 @@ class JarvisApp:
         scheduler = SchedulerEngine()
         scheduler.start()
         trigger = AgentTrigger(client=client, agent_id=agent.id, router=router)
+
+        # Schedule learning cycle if enabled
+        if self.settings.memory.learning_enabled:
+            hours = self.settings.memory.learning_interval_hours
+            cron_expr = "0 0 * * *" if hours >= 24 else f"0 */{hours} * * *"
+            scheduler.add_cron(
+                "learning-cycle", cron_expr,
+                run_learning_cycle, client, agent.id,
+            )
+            log.info("app.learning_scheduled", interval_hours=hours)
 
         # Internal HTTP server
         whatsapp_channel = channels.get(ChannelType.WHATSAPP)

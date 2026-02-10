@@ -55,12 +55,16 @@ jarvis/
 
 ## Current State
 
-- **Current phase**: 8 (Docker + Monitoring) — COMPLETE
-- **Next phase**: 9 (Google Docs/Sheets + Todoist + Memory & Learning)
-- **What exists**: Full message loop + tools + Slack + WhatsApp + scheduler + proactive messaging + Gmail + Google Calendar + Notion + Google Slides + Browser automation + Monitoring + Docker. HTTP bridge has 28 endpoints (enhanced health, metrics, outbound, whatsapp/inbound, 4 scheduler, 4 Gmail, 4 GCal, 4 Slides, 5 Notion, 3 Browser). 30 tools registered with Letta agent. Three active channels: CLI, Slack, WhatsApp. 187 unit + 16 integration = 203 tests — all passing (integration skipped without Letta server).
+- **Current phase**: 9 (Google Docs/Sheets + Todoist + Memory & Learning) — COMPLETE
+- **Next phase**: 10 (Voice STT/TTS)
+- **What exists**: Full message loop + tools + Slack + WhatsApp + scheduler + proactive messaging + Gmail + Google Calendar + Notion + Google Slides + Google Docs + Google Sheets + Todoist + Browser automation + Memory & Learning + Monitoring + Docker. HTTP bridge has 42 endpoints (enhanced health, metrics, outbound, whatsapp/inbound, 4 scheduler, 4 Gmail, 4 GCal, 4 Slides, 5 Notion, 3 Browser, 4 Todoist, 4 Docs, 4 Sheets, 2 Memory). 44 tools registered with Letta agent. Three active channels: CLI, Slack, WhatsApp. 218 unit + 16 integration = 234 tests — all passing (integration skipped without Letta server).
 - **Monitoring**: Prometheus metrics (HTTP requests, tool invocations, messages, errors), configurable structlog renderer (console/JSON), aiohttp observability middleware, enhanced `/health` endpoint with Letta connectivity check, `/metrics` endpoint.
 - **Docker**: Multi-stage Dockerfile (python:3.11-slim + Playwright Chromium), `docker-compose.yml` with 4 services (letta_db, letta_server, jarvis, whatsapp_bridge), health checks on all services, `jarvis-docker.yaml` with service discovery hostnames.
 - **Google Slides**: Live-validated. All 4 endpoints working (list, create, read, add_slide with text insertion). Fixed `gslides_add_slide` to use `placeholderIdMappings` + `insertText` for title/body.
+- **Google Docs**: Live-validated. All 4 endpoints working (list, create, read, append). Text extraction from nested `body.content` paragraph elements. Append via `batchUpdate` with `insertText` at `endOfSegmentLocation`.
+- **Google Sheets**: Live-validated. All 4 endpoints working (list, create, read, append rows). `values_json: str` param for write data (JSON-encoded `list[list]` for Letta compatibility).
+- **Todoist**: Live-validated. All 4 endpoints working (list_tasks, create_task, complete_task, list_projects). REST API v2 via `requests` with Bearer token auth.
+- **Memory & Learning**: Archival memory save/recall with category tagging. Learning module reads Prometheus counters, builds usage summary, updates human memory block via cron (configurable interval).
 
 ## Known Gotchas
 
@@ -93,3 +97,11 @@ jarvis/
 - **`get_or_create_agent` returns tuple**: `(agent, tool_count)` — only `app.py` calls this, but any test that calls it must unpack.
 - **Prometheus counter testing**: Use delta-based assertions (read before, act, read after). Global registry is shared across tests.
 - **Docker Jarvis config**: Set `JARVIS_CONFIG=/app/config/jarvis-docker.yaml` env var in compose. Uses service names for discovery (letta_server, whatsapp_bridge).
+- **Google API enablement**: OAuth scopes alone are not enough — each Google API (Docs, Sheets, Slides, etc.) must be separately **enabled** in the GCP console at `console.developers.google.com/apis/api/{api}.googleapis.com/overview`. First call will 403 if API is disabled.
+- **Google OAuth re-auth on new scopes**: Adding new scopes to `auth.py` + `setup_google_oauth.py` requires deleting `google_token.json` and re-running `uv run python scripts/setup_google_oauth.py`. Existing tokens won't have the new scopes.
+- **Google Docs `endOfSegmentLocation`**: Empty `{}` dict inserts at end of body. Get doc first to find end index via `body.content[-1].endIndex - 1`.
+- **Sheets `values_json` workaround**: Letta tool type hints reject complex types. Pass `values_json: str` and `json.loads()` in the handler. Same pattern for any structured data.
+- **Todoist `due` field**: Can be `null` or a dict with `string`, `date`, `datetime` keys. Handle both cases when displaying.
+- **Letta passages API (formerly archival_memory)**: Use `client.agents.passages.create(agent_id, text=..., tags=[...])` for insert, `client.agents.passages.search(agent_id, query=..., top_k=N)` for search. Search returns `PassageSearchResponse` with `.results` list of `Result` objects having `.content` (not `.text`), `.timestamp` (not `.created_at`), `.tags`.
+- **Letta `agents.blocks.list()` returns `SyncArrayPage`**: Same pagination pattern as `agents.list()`. Use `.items` guard: `page.items if hasattr(page, "items") else page`.
+- **Prometheus counter test isolation**: Global Prometheus registry is shared. Learning cycle tests need explicit counter increments before running, otherwise `collect_usage_stats()` returns empty data and the cycle skips.

@@ -8,11 +8,13 @@ from aiohttp import web
 
 from jarvis.browser import handlers as browser_handlers
 from jarvis.channels.base import ChannelType
+from jarvis.google import docs_handlers, sheets_handlers, slides_handlers
 from jarvis.google import handlers as google_handlers
-from jarvis.google import slides_handlers
+from jarvis.memory import handlers as memory_handlers
 from jarvis.monitoring.health import build_report, check_letta
 from jarvis.monitoring.middleware import observability_middleware
 from jarvis.notion import handlers as notion_handlers
+from jarvis.todoist import handlers as todoist_handlers
 
 log = structlog.get_logger()
 
@@ -74,11 +76,29 @@ class InternalServer:
             web.post("/notion/create", self._notion_create),
             web.post("/notion/append", self._notion_append),
             web.post("/notion/query_db", self._notion_query_db),
+            # Google Docs
+            web.post("/google/docs/list", self._gdocs_list),
+            web.post("/google/docs/read", self._gdocs_read),
+            web.post("/google/docs/create", self._gdocs_create),
+            web.post("/google/docs/append", self._gdocs_append),
+            # Google Sheets
+            web.post("/google/sheets/list", self._gsheets_list),
+            web.post("/google/sheets/read", self._gsheets_read),
+            web.post("/google/sheets/create", self._gsheets_create),
+            web.post("/google/sheets/append", self._gsheets_append),
             # Google Slides
             web.post("/google/slides/list", self._gslides_list),
             web.post("/google/slides/read", self._gslides_read),
             web.post("/google/slides/create", self._gslides_create),
             web.post("/google/slides/add_slide", self._gslides_add_slide),
+            # Todoist
+            web.post("/todoist/tasks", self._todoist_list_tasks),
+            web.post("/todoist/tasks/create", self._todoist_create_task),
+            web.post("/todoist/tasks/complete", self._todoist_complete_task),
+            web.post("/todoist/projects", self._todoist_list_projects),
+            # Memory
+            web.post("/memory/save", self._memory_save),
+            web.post("/memory/recall", self._memory_recall),
             # Browser
             web.post("/browser/navigate", self._browser_navigate),
             web.post("/browser/screenshot", self._browser_screenshot),
@@ -282,6 +302,68 @@ class InternalServer:
         )
         return web.json_response({"results": results})
 
+    # --- Google Docs bridge handlers ---
+
+    async def _gdocs_list(self, request: web.Request) -> web.Response:
+        data = await request.json()
+        results = await asyncio.to_thread(
+            docs_handlers.gdocs_list, data.get("max_results", 10)
+        )
+        return web.json_response({"results": results})
+
+    async def _gdocs_read(self, request: web.Request) -> web.Response:
+        data = await request.json()
+        result = await asyncio.to_thread(
+            docs_handlers.gdocs_read, data["document_id"]
+        )
+        return web.json_response(result)
+
+    async def _gdocs_create(self, request: web.Request) -> web.Response:
+        data = await request.json()
+        result = await asyncio.to_thread(
+            docs_handlers.gdocs_create, data["title"]
+        )
+        return web.json_response(result)
+
+    async def _gdocs_append(self, request: web.Request) -> web.Response:
+        data = await request.json()
+        result = await asyncio.to_thread(
+            docs_handlers.gdocs_append, data["document_id"], data["text"]
+        )
+        return web.json_response(result)
+
+    # --- Google Sheets bridge handlers ---
+
+    async def _gsheets_list(self, request: web.Request) -> web.Response:
+        data = await request.json()
+        results = await asyncio.to_thread(
+            sheets_handlers.gsheets_list, data.get("max_results", 10)
+        )
+        return web.json_response({"results": results})
+
+    async def _gsheets_read(self, request: web.Request) -> web.Response:
+        data = await request.json()
+        result = await asyncio.to_thread(
+            sheets_handlers.gsheets_read,
+            data["spreadsheet_id"], data.get("range_str", "Sheet1"),
+        )
+        return web.json_response(result)
+
+    async def _gsheets_create(self, request: web.Request) -> web.Response:
+        data = await request.json()
+        result = await asyncio.to_thread(
+            sheets_handlers.gsheets_create, data["title"]
+        )
+        return web.json_response(result)
+
+    async def _gsheets_append(self, request: web.Request) -> web.Response:
+        data = await request.json()
+        result = await asyncio.to_thread(
+            sheets_handlers.gsheets_append,
+            data["spreadsheet_id"], data["range_str"], data["values_json"],
+        )
+        return web.json_response(result)
+
     # --- Google Slides bridge handlers ---
 
     async def _gslides_list(self, request: web.Request) -> web.Response:
@@ -335,3 +417,53 @@ class InternalServer:
             browser_handlers.browser_extract, data["url"], data["selector"],
         )
         return web.json_response(result)
+
+    # --- Todoist bridge handlers ---
+
+    async def _todoist_list_tasks(self, request: web.Request) -> web.Response:
+        data = await request.json()
+        results = await asyncio.to_thread(
+            todoist_handlers.todoist_list_tasks,
+            data.get("project_id", ""), data.get("filter_str", ""),
+        )
+        return web.json_response({"results": results})
+
+    async def _todoist_create_task(self, request: web.Request) -> web.Response:
+        data = await request.json()
+        result = await asyncio.to_thread(
+            todoist_handlers.todoist_create_task,
+            data["content"],
+            data.get("project_id", ""),
+            data.get("due_string", ""),
+            data.get("priority", 1),
+        )
+        return web.json_response(result)
+
+    async def _todoist_complete_task(self, request: web.Request) -> web.Response:
+        data = await request.json()
+        result = await asyncio.to_thread(
+            todoist_handlers.todoist_complete_task, data["task_id"],
+        )
+        return web.json_response(result)
+
+    async def _todoist_list_projects(self, request: web.Request) -> web.Response:
+        results = await asyncio.to_thread(todoist_handlers.todoist_list_projects)
+        return web.json_response({"results": results})
+
+    # --- Memory bridge handlers ---
+
+    async def _memory_save(self, request: web.Request) -> web.Response:
+        data = await request.json()
+        result = memory_handlers.memory_save(
+            self._letta_client, self._agent_id,
+            data["content"], data.get("category", ""),
+        )
+        return web.json_response(result)
+
+    async def _memory_recall(self, request: web.Request) -> web.Response:
+        data = await request.json()
+        results = memory_handlers.memory_recall(
+            self._letta_client, self._agent_id,
+            data["query"], data.get("category", ""), data.get("max_results", 5),
+        )
+        return web.json_response({"results": results})
