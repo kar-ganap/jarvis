@@ -8,12 +8,16 @@ from jarvis.tools import (
     browser,
     file_ops,
     gcal,
+    gdocs,
     gmail,
+    gsheets,
     gslides,
+    memory_tool,
     messaging,
     notion,
     scheduler_tool,
     shell,
+    todoist,
     web_search,
 )
 from jarvis.tools.registry import collect_tools, register_tools, sync_agent_tools
@@ -31,7 +35,8 @@ def get_or_create_agent(client, settings: JarvisSettings):
     # Register tools with Letta (idempotent)
     tool_funcs = collect_tools(
         shell, web_search, file_ops, messaging, scheduler_tool,
-        gmail, gcal, gslides, notion, browser,
+        gmail, gcal, gslides, gdocs, gsheets, notion, browser, todoist,
+        memory_tool,
     )
     tool_ids = register_tools(client, tool_funcs)
 

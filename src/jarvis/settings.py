@@ -47,6 +47,11 @@ class GoogleSettings(BaseModel):
     token_path: str = "google_token.json"
 
 
+class TodoistSettings(BaseModel):
+    enabled: bool = False
+    api_key: str = ""
+
+
 class NotionSettings(BaseModel):
     enabled: bool = False
 
@@ -55,6 +60,11 @@ class BrowserSettings(BaseModel):
     enabled: bool = True
     headless: bool = True
     timeout_ms: int = 30000
+
+
+class MemorySettings(BaseModel):
+    learning_enabled: bool = True
+    learning_interval_hours: int = 24
 
 
 class MonitoringSettings(BaseModel):
@@ -70,8 +80,10 @@ class JarvisSettings(BaseModel):
     http: HttpSettings = HttpSettings()
     whatsapp: WhatsAppSettings = WhatsAppSettings()
     google: GoogleSettings = GoogleSettings()
+    todoist: TodoistSettings = TodoistSettings()
     notion: NotionSettings = NotionSettings()
     browser: BrowserSettings = BrowserSettings()
+    memory: MemorySettings = MemorySettings()
     monitoring: MonitoringSettings = MonitoringSettings()
 
 
@@ -100,6 +112,11 @@ def load_settings(config_path: Path | None = None) -> JarvisSettings:
     if not slack.app_token:
         slack.app_token = os.environ.get("SLACK_APP_TOKEN", "")
 
+    todoist_raw = raw.get("todoist") or {}
+    todoist = TodoistSettings(**todoist_raw)
+    if not todoist.api_key:
+        todoist.api_key = os.environ.get("TODOIST_API_KEY", "")
+
     return JarvisSettings(
         letta=LettaSettings(**(raw.get("letta") or {})),
         agent=AgentSettings(**(raw.get("agent") or {})),
@@ -108,7 +125,9 @@ def load_settings(config_path: Path | None = None) -> JarvisSettings:
         http=HttpSettings(**(raw.get("http") or {})),
         whatsapp=WhatsAppSettings(**(raw.get("whatsapp") or {})),
         google=GoogleSettings(**(raw.get("google") or {})),
+        todoist=todoist,
         notion=NotionSettings(**(raw.get("notion") or {})),
         browser=BrowserSettings(**(raw.get("browser") or {})),
+        memory=MemorySettings(**(raw.get("memory") or {})),
         monitoring=MonitoringSettings(**(raw.get("monitoring") or {})),
     )

@@ -137,3 +137,45 @@ class TestLoadSettings:
 
         settings = load_settings(config_path)
         assert settings.notion.enabled is True
+
+    def test_loads_todoist_settings(self, tmp_path: Path) -> None:
+        """Todoist settings are loaded from YAML config."""
+        import yaml
+
+        from jarvis.settings import load_settings
+
+        config = {
+            "letta": {},
+            "agent": {},
+            "user": {},
+            "todoist": {
+                "enabled": True,
+            },
+        }
+        config_path = tmp_path / "jarvis.yaml"
+        config_path.write_text(yaml.dump(config))
+
+        settings = load_settings(config_path)
+        assert settings.todoist.enabled is True
+
+    def test_loads_memory_settings(self, tmp_path: Path) -> None:
+        """Memory settings are loaded from YAML config."""
+        import yaml
+
+        from jarvis.settings import load_settings
+
+        config = {
+            "letta": {},
+            "agent": {},
+            "user": {},
+            "memory": {
+                "learning_enabled": False,
+                "learning_interval_hours": 12,
+            },
+        }
+        config_path = tmp_path / "jarvis.yaml"
+        config_path.write_text(yaml.dump(config))
+
+        settings = load_settings(config_path)
+        assert settings.memory.learning_enabled is False
+        assert settings.memory.learning_interval_hours == 12
