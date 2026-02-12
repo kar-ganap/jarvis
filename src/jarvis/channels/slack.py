@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import aiohttp
 import structlog
 from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 from slack_bolt.app.async_app import AsyncApp
@@ -74,21 +75,44 @@ class SlackChannel(Channel):
 
         display_name = await self._resolve_user_name(client, user_id)
 
+        # Check for audio file attachments
+        audio_data = None
+        audio_mime = None
+        for f in event.get("files", []):
+            mime = f.get("mimetype", "")
+            if mime.startswith("audio/"):
+                url = f.get("url_private_download", "")
+                if url:
+                    audio_data = await self._download_slack_file(url)
+                    audio_mime = mime
+                break
+
         msg = ChannelMessage(
             channel_type=ChannelType.SLACK,
             user=ChannelUser(id=channel_id, display_name=display_name),
             text=text,
             raw=event,
+            audio_data=audio_data,
+            audio_mime=audio_mime,
         )
 
         log.info(
             "slack.inbound",
             user=display_name,
             channel=channel_id,
+            has_audio=audio_data is not None,
         )
 
         if self._on_message:
             await self._on_message(msg)
+
+    async def _download_slack_file(self, url: str) -> bytes:
+        """Download a file from Slack using bot token auth."""
+        headers = {"Authorization": f"Bearer {self._bot_token}"}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as resp:
+                resp.raise_for_status()
+                return await resp.read()
 
     async def _resolve_user_name(self, client, user_id: str) -> str:
         """Resolve Slack user ID to display name."""
@@ -112,8 +136,21 @@ class SlackChannel(Channel):
 
     async def send(self, message: OutboundMessage) -> None:
         """Send a message to a Slack channel/DM."""
-        if self._app:
-            await self._app.client.chat_postMessage(
+        if not self._app:
+            return
+
+        # Upload audio file if present
+        if message.audio_data:
+            ext = "mp3" if "mp3" in (message.audio_mime or "") else "ogg"
+            await self._app.client.files_upload_v2(
                 channel=message.recipient_id,
-                text=message.text,
+                content=message.audio_data,
+                filename=f"voice_reply.{ext}",
+                title="Voice Reply",
             )
+
+        # Always send text
+        await self._app.client.chat_postMessage(
+            channel=message.recipient_id,
+            text=message.text,
+        )

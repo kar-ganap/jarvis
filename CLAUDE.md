@@ -55,16 +55,12 @@ jarvis/
 
 ## Current State
 
-- **Current phase**: 9 (Google Docs/Sheets + Todoist + Memory & Learning) — COMPLETE
-- **Next phase**: 10 (Voice STT/TTS)
-- **What exists**: Full message loop + tools + Slack + WhatsApp + scheduler + proactive messaging + Gmail + Google Calendar + Notion + Google Slides + Google Docs + Google Sheets + Todoist + Browser automation + Memory & Learning + Monitoring + Docker. HTTP bridge has 42 endpoints (enhanced health, metrics, outbound, whatsapp/inbound, 4 scheduler, 4 Gmail, 4 GCal, 4 Slides, 5 Notion, 3 Browser, 4 Todoist, 4 Docs, 4 Sheets, 2 Memory). 44 tools registered with Letta agent. Three active channels: CLI, Slack, WhatsApp. 218 unit + 16 integration = 234 tests — all passing (integration skipped without Letta server).
+- **Current phase**: 10 (Voice STT/TTS) — COMPLETE
+- **Next phase**: 11 (TBD)
+- **What exists**: Full message loop + tools + Slack + WhatsApp + scheduler + proactive messaging + Gmail + Google Calendar + Notion + Google Slides + Google Docs + Google Sheets + Todoist + Browser automation + Memory & Learning + Monitoring + Docker + Voice STT/TTS. HTTP bridge has 42 endpoints. 44 tools registered with Letta agent. Three active channels: CLI, Slack, WhatsApp — all with voice I/O support. 262 unit + 16 integration = 278 tests — all passing (integration skipped without Letta server).
+- **Voice**: OpenAI Whisper STT + TTS (tts-1). VoiceService class wraps OpenAI API. Router-level integration: transcribes inbound audio, synthesizes outbound. tts_mode: "auto" (voice reply only for voice input), "always", "never". WhatsApp voice notes via Baileys `downloadMediaMessage`/`sendMessage({audio, ptt})`. Slack audio file download/upload. CLI full voice I/O via `sounddevice` (mic recording + audio playback).
 - **Monitoring**: Prometheus metrics (HTTP requests, tool invocations, messages, errors), configurable structlog renderer (console/JSON), aiohttp observability middleware, enhanced `/health` endpoint with Letta connectivity check, `/metrics` endpoint.
 - **Docker**: Multi-stage Dockerfile (python:3.11-slim + Playwright Chromium), `docker-compose.yml` with 4 services (letta_db, letta_server, jarvis, whatsapp_bridge), health checks on all services, `jarvis-docker.yaml` with service discovery hostnames.
-- **Google Slides**: Live-validated. All 4 endpoints working (list, create, read, add_slide with text insertion). Fixed `gslides_add_slide` to use `placeholderIdMappings` + `insertText` for title/body.
-- **Google Docs**: Live-validated. All 4 endpoints working (list, create, read, append). Text extraction from nested `body.content` paragraph elements. Append via `batchUpdate` with `insertText` at `endOfSegmentLocation`.
-- **Google Sheets**: Live-validated. All 4 endpoints working (list, create, read, append rows). `values_json: str` param for write data (JSON-encoded `list[list]` for Letta compatibility).
-- **Todoist**: Live-validated. All 4 endpoints working (list_tasks, create_task, complete_task, list_projects). REST API v2 via `requests` with Bearer token auth.
-- **Memory & Learning**: Archival memory save/recall with category tagging. Learning module reads Prometheus counters, builds usage summary, updates human memory block via cron (configurable interval).
 
 ## Known Gotchas
 
@@ -105,3 +101,12 @@ jarvis/
 - **Letta passages API (formerly archival_memory)**: Use `client.agents.passages.create(agent_id, text=..., tags=[...])` for insert, `client.agents.passages.search(agent_id, query=..., top_k=N)` for search. Search returns `PassageSearchResponse` with `.results` list of `Result` objects having `.content` (not `.text`), `.timestamp` (not `.created_at`), `.tags`.
 - **Letta `agents.blocks.list()` returns `SyncArrayPage`**: Same pagination pattern as `agents.list()`. Use `.items` guard: `page.items if hasattr(page, "items") else page`.
 - **Prometheus counter test isolation**: Global Prometheus registry is shared. Learning cycle tests need explicit counter increments before running, otherwise `collect_usage_stats()` returns empty data and the cycle skips.
+- **OpenAI Whisper needs file extension**: `transcriptions.create()` infers format from filename. Must write temp file with correct extension (`.ogg`, `.mp3`, etc.) not just `.tmp`.
+- **WhatsApp voice notes are OGG/Opus**: Baileys `audioMessage` uses `audio/ogg; codecs=opus`. Whisper supports this natively.
+- **Slack audio files need auth**: `url_private_download` requires `Authorization: Bearer xoxb-...` header. Regular fetch won't work.
+- **`express.json()` default limit is 100kb**: Base64 audio can be several MB. Bridge uses `{ limit: '10mb' }`.
+- **TTS output must be OGG/Opus for WhatsApp**: OpenAI TTS with `response_format="opus"` produces OGG/Opus. MP3 with `ptt: true` is silently dropped by WhatsApp — audio appears sent but never delivered. Always use Opus for voice notes.
+- **sounddevice needs PortAudio**: On macOS `brew install portaudio`, on Linux `apt-get install libportaudio2`. In Docker (no mic/speaker), `_ensure_audio_libs()` returns `False` and CLI voice gracefully disables itself.
+- **CLI voice lazy imports**: `sounddevice` and `soundfile` are lazy-imported in `cli.py` via `_ensure_audio_libs()`. If PortAudio is missing (Docker), voice mode auto-disables instead of crashing.
+- **Router STT/TTS outside Letta lock**: Voice transcription and synthesis happen outside `self._lock` to avoid blocking other messages during audio processing.
+- **OpenAI API key reuse**: Voice service uses `OPENAI_API_KEY` — same env var as Letta embeddings. No separate key needed.

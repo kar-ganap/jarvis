@@ -5,7 +5,7 @@ import routes from "./routes.js";
 const PORT = parseInt(process.env.WHATSAPP_BRIDGE_PORT || "9120", 10);
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use("/", routes);
 
 app.listen(PORT, () => {

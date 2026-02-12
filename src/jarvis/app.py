@@ -41,10 +41,24 @@ class JarvisApp:
 
         channels = ChannelRegistry.build(self.settings)
 
+        # Voice service (optional)
+        voice_service = None
+        if self.settings.voice.enabled and self.settings.voice.openai_api_key:
+            from jarvis.voice.service import VoiceService
+            voice_service = VoiceService(
+                api_key=self.settings.voice.openai_api_key,
+                stt_model=self.settings.voice.stt_model,
+                tts_model=self.settings.voice.tts_model,
+                tts_voice=self.settings.voice.tts_voice,
+            )
+            log.info("app.voice_enabled", tts_mode=self.settings.voice.tts_mode)
+
         router = MessageRouter(
             client=client,
             agent_id=agent.id,
             channels=channels,
+            voice_service=voice_service,
+            tts_mode=self.settings.voice.tts_mode,
         )
 
         # Scheduler + trigger

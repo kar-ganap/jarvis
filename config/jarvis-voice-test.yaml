@@ -12,18 +12,14 @@ user:
   preferred_channel: "cli"
 
 slack:
-  enabled: true
-  bot_token: ""   # Set via SLACK_BOT_TOKEN env var
-  app_token: ""   # Set via SLACK_APP_TOKEN env var
+  enabled: false
 
 http:
   port: 9100
   host: "0.0.0.0"
 
 whatsapp:
-  enabled: true
-  bridge_url: "http://localhost:9120"
-  allow_groups: false
+  enabled: false
 
 google:
   client_secrets_path: "gcp_oauth_client_id.json"
@@ -36,20 +32,17 @@ notion:
   enabled: false
 
 browser:
-  enabled: true
-  headless: true
-  timeout_ms: 30000
+  enabled: false
 
 memory:
-  learning_enabled: true
-  learning_interval_hours: 24
+  learning_enabled: false
 
 voice:
-  enabled: false
+  enabled: true
   stt_model: "whisper-1"
   tts_model: "tts-1"
   tts_voice: "nova"
-  tts_mode: "auto"
+  tts_mode: "always"
 
 monitoring:
   metrics_enabled: true

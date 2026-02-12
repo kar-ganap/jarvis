@@ -21,6 +21,7 @@ class ChannelRegistry:
         # CLI is always enabled
         channels[ChannelType.CLI] = CLIChannel(
             user_name=settings.user.name,
+            voice_enabled=settings.voice.enabled,
         )
 
         # Slack — enabled if configured
