@@ -67,6 +67,15 @@ class MemorySettings(BaseModel):
     learning_interval_hours: int = 24
 
 
+class VoiceSettings(BaseModel):
+    enabled: bool = False
+    openai_api_key: str = ""
+    stt_model: str = "whisper-1"
+    tts_model: str = "tts-1"
+    tts_voice: str = "nova"
+    tts_mode: str = "auto"
+
+
 class MonitoringSettings(BaseModel):
     metrics_enabled: bool = True
     log_format: str = "console"
@@ -84,6 +93,7 @@ class JarvisSettings(BaseModel):
     notion: NotionSettings = NotionSettings()
     browser: BrowserSettings = BrowserSettings()
     memory: MemorySettings = MemorySettings()
+    voice: VoiceSettings = VoiceSettings()
     monitoring: MonitoringSettings = MonitoringSettings()
 
 
@@ -117,6 +127,11 @@ def load_settings(config_path: Path | None = None) -> JarvisSettings:
     if not todoist.api_key:
         todoist.api_key = os.environ.get("TODOIST_API_KEY", "")
 
+    voice_raw = raw.get("voice") or {}
+    voice = VoiceSettings(**voice_raw)
+    if not voice.openai_api_key:
+        voice.openai_api_key = os.environ.get("OPENAI_API_KEY", "")
+
     return JarvisSettings(
         letta=LettaSettings(**(raw.get("letta") or {})),
         agent=AgentSettings(**(raw.get("agent") or {})),
@@ -126,6 +141,7 @@ def load_settings(config_path: Path | None = None) -> JarvisSettings:
         whatsapp=WhatsAppSettings(**(raw.get("whatsapp") or {})),
         google=GoogleSettings(**(raw.get("google") or {})),
         todoist=todoist,
+        voice=voice,
         notion=NotionSettings(**(raw.get("notion") or {})),
         browser=BrowserSettings(**(raw.get("browser") or {})),
         memory=MemorySettings(**(raw.get("memory") or {})),

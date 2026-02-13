@@ -12,12 +12,17 @@ dependencies = [
     "google-auth-oauthlib>=1.2.4",
     "letta-client>=1.7.8",
     "notion-client>=2.2.1",
+    "numpy>=2.4.2",
+    "openai>=2.20.0",
     "playwright>=1.58.0",
     "prometheus-client>=0.21.0",
     "pydantic-settings>=2.12.0",
     "pyyaml>=6.0.3",
     "requests>=2.32.5",
+    "scipy>=1.17.0",
     "slack-bolt>=1.27.0",
+    "sounddevice>=0.5.5",
+    "soundfile>=0.13.1",
     "structlog>=25.5.0",
 ]
 
@@ -30,6 +35,9 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.11"

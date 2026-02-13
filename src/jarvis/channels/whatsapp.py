@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 
 import aiohttp
 import structlog
@@ -45,6 +46,10 @@ class WhatsAppChannel(Channel):
 
     async def send(self, message: OutboundMessage) -> None:
         """Send a message via the Baileys bridge. Retries once on failure."""
+        if message.audio_data:
+            await self._send_audio(message)
+            return
+
         payload = {"to": message.recipient_id, "text": message.text}
         timeout = aiohttp.ClientTimeout(total=10)
         try:
@@ -60,6 +65,20 @@ class WhatsAppChannel(Channel):
             ) as resp:
                 resp.raise_for_status()
 
+    async def _send_audio(self, message: OutboundMessage) -> None:
+        """Send an audio message via the bridge /send-audio endpoint."""
+        payload = {
+            "to": message.recipient_id,
+            "audio_base64": base64.b64encode(message.audio_data).decode(),
+            "mime_type": message.audio_mime or "audio/ogg; codecs=opus",
+            "text": message.text,
+        }
+        timeout = aiohttp.ClientTimeout(total=30)
+        async with self._session.post(
+            f"{self._bridge_url}/send-audio", json=payload, timeout=timeout,
+        ) as resp:
+            resp.raise_for_status()
+
     async def dispatch_webhook(self, data: dict) -> None:
         """Normalize webhook payload to ChannelMessage and forward to router."""
         if self._should_skip(data):
@@ -71,21 +90,33 @@ class WhatsAppChannel(Channel):
         user_id = data.get("chat_jid", sender)
         is_group = data.get("is_group", False)
 
+        # Decode audio if present
+        audio_data = None
+        audio_mime = None
+        if data.get("audio_data"):
+            audio_data = base64.b64decode(data["audio_data"])
+            audio_mime = data.get("audio_mime", "audio/ogg")
+
         msg = ChannelMessage(
             channel_type=ChannelType.WHATSAPP,
             user=ChannelUser(id=user_id, display_name=push_name),
             text=text,
             raw=data,
+            audio_data=audio_data,
+            audio_mime=audio_mime,
         )
 
-        log.info("whatsapp.inbound", sender=push_name, is_group=is_group)
+        log.info(
+            "whatsapp.inbound", sender=push_name,
+            is_group=is_group, has_audio=audio_data is not None,
+        )
 
         if self._on_message:
             await self._on_message(msg)
 
     def _should_skip(self, data: dict) -> bool:
         """Return True if this message should be ignored."""
-        if not data.get("text"):
+        if not data.get("text") and not data.get("audio_data"):
             return True
         if data.get("is_status", False):
             return True

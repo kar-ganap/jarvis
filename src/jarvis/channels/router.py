@@ -24,10 +24,14 @@ class MessageRouter:
         client,
         agent_id: str,
         channels: dict[ChannelType, Channel],
+        voice_service=None,
+        tts_mode: str = "auto",
     ) -> None:
         self._client = client
         self._agent_id = agent_id
         self._channels = channels
+        self._voice = voice_service
+        self._tts_mode = tts_mode
         self._lock = asyncio.Lock()
 
     async def handle_inbound(self, message: ChannelMessage) -> None:
@@ -35,7 +39,22 @@ class MessageRouter:
         chan = message.channel_type
         uid = message.user.id
         name = message.user.display_name
-        prefixed = f"[{chan}|{uid}|{name}] {message.text}"
+        inbound_was_voice = False
+
+        # STT: transcribe audio if present
+        text = message.text
+        if message.audio_data and self._voice:
+            text = await asyncio.to_thread(
+                self._voice.transcribe, message.audio_data, message.audio_mime or "audio/ogg",
+            )
+            inbound_was_voice = True
+            log.info("router.transcribed", channel=chan, text_len=len(text))
+
+        if not text:
+            log.debug("router.no_text_after_transcription")
+            return
+
+        prefixed = f"[{chan}|{uid}|{name}] {text}"
 
         MESSAGE_COUNT.labels(channel=str(chan), direction="inbound").inc()
 
@@ -57,10 +76,19 @@ class MessageRouter:
             log.debug("router.no_assistant_reply")
             return
 
+        # TTS: synthesize audio if configured
+        audio_data = None
+        audio_mime = None
+        if self._voice and self._should_synthesize(inbound_was_voice):
+            audio_data = await asyncio.to_thread(self._voice.synthesize, reply_text)
+            audio_mime = "audio/ogg; codecs=opus"
+
         outbound = OutboundMessage(
             channel_type=message.channel_type,
             recipient_id=message.user.id,
             text=reply_text,
+            audio_data=audio_data,
+            audio_mime=audio_mime,
         )
 
         channel = self._channels.get(message.channel_type)
@@ -70,12 +98,30 @@ class MessageRouter:
                 channel=str(message.channel_type), direction="outbound",
             ).inc()
 
+    def _should_synthesize(self, inbound_was_voice: bool) -> bool:
+        """Decide whether to synthesize TTS based on tts_mode."""
+        if self._tts_mode == "always":
+            return True
+        if self._tts_mode == "auto" and inbound_was_voice:
+            return True
+        return False
+
     async def send_proactive(
         self, channel_type: ChannelType, recipient_id: str, text: str
     ) -> None:
         """Send a proactive (agent-initiated) message to a channel."""
+        audio_data = None
+        audio_mime = None
+        if self._voice and self._tts_mode == "always":
+            audio_data = await asyncio.to_thread(self._voice.synthesize, text)
+            audio_mime = "audio/ogg; codecs=opus"
+
         outbound = OutboundMessage(
-            channel_type=channel_type, recipient_id=recipient_id, text=text
+            channel_type=channel_type,
+            recipient_id=recipient_id,
+            text=text,
+            audio_data=audio_data,
+            audio_mime=audio_mime,
         )
         channel = self._channels.get(channel_type)
         if channel:

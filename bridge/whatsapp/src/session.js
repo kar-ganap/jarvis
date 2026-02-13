@@ -4,6 +4,7 @@ import {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
+  downloadMediaMessage,
 } from "@whiskeysockets/baileys";
 import pino from "pino";
 import qrcode from "qrcode-terminal";
@@ -104,7 +105,20 @@ async function createSession() {
         text = `[media: ${messageType}] ${msg.message[messageType].caption}`;
       }
 
-      if (!text) continue;
+      // Extract audio if present
+      let audioData = null;
+      let audioMime = null;
+      if (messageType === "audioMessage") {
+        try {
+          const buffer = await downloadMediaMessage(msg, "buffer", {});
+          audioData = buffer.toString("base64");
+          audioMime = msg.message.audioMessage.mimetype || "audio/ogg; codecs=opus";
+        } catch (err) {
+          console.error("[bridge] Audio download failed:", err.message);
+        }
+      }
+
+      if (!text && !audioData) continue;
 
       const senderJid = msg.key.remoteJid;
       const isGroup = senderJid.endsWith("@g.us");
@@ -120,6 +134,8 @@ async function createSession() {
         is_group: isGroup,
         is_status: isStatus,
         message_id: msg.key.id,
+        audio_data: audioData,
+        audio_mime: audioMime,
       };
 
       try {

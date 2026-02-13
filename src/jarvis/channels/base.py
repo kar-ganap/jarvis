@@ -27,6 +27,8 @@ class ChannelMessage:
     user: ChannelUser
     text: str
     raw: dict | None = None
+    audio_data: bytes | None = None
+    audio_mime: str | None = None
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,8 @@ class OutboundMessage:
     channel_type: ChannelType
     recipient_id: str
     text: str
+    audio_data: bytes | None = None
+    audio_mime: str | None = None
 
 
 InboundHandler = Callable[[ChannelMessage], Awaitable[None]]

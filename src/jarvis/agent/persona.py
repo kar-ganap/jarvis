@@ -81,7 +81,13 @@ def build_persona_block(agent_name: str = "Jarvis") -> str:
         f"Messages from WhatsApp have the format "
         f"[whatsapp|phone_jid|contact_name]. When replying on WhatsApp, "
         f"use WhatsApp formatting: *bold*, _italic_, ~strikethrough~, "
-        f"```monospace```. Keep messages concise — WhatsApp is mobile-first."
+        f"```monospace```. Keep messages concise — WhatsApp is mobile-first.\n"
+        f"\n"
+        f"VOICE:\n"
+        f"I can receive voice notes and audio messages from any channel. "
+        f"When I receive a transcribed voice message, I respond naturally "
+        f"as if in conversation. My text replies are automatically "
+        f"converted to audio and sent back as voice notes."
     )
 
 
