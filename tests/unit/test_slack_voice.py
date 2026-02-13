@@ -105,6 +105,64 @@ class TestSlackVoiceDispatch:
         assert msg.audio_data is None
 
 
+    def test_dispatch_video_mp4_audio_clip(self, slack_channel):
+        """Re-uploaded Slack audio clips come as video/mp4 with audio_message name."""
+        mock_client = AsyncMock()
+        mock_client.users_info.return_value = {
+            "user": {"profile": {"display_name": "Kartik"}}
+        }
+
+        event = {
+            "user": "U123",
+            "channel": "C456",
+            "text": "",
+            "files": [
+                {
+                    "mimetype": "video/mp4",
+                    "url_private_download": "https://files.slack.com/audio_message.mp4",
+                    "name": "audio_message.mp4",
+                    "size": 38565,
+                }
+            ],
+        }
+
+        from unittest.mock import patch
+
+        with patch.object(slack_channel, "_download_slack_file", return_value=b"fake-mp4"):
+            asyncio.run(slack_channel._dispatch(event, mock_client))
+
+        slack_channel._on_message.assert_called_once()
+        msg = slack_channel._on_message.call_args[0][0]
+        assert msg.audio_data == b"fake-mp4"
+        assert msg.audio_mime == "video/mp4"
+
+    def test_video_mp4_non_audio_ignored(self, slack_channel):
+        """Regular video/mp4 files (not audio clips) should not be treated as audio."""
+        mock_client = AsyncMock()
+        mock_client.users_info.return_value = {
+            "user": {"profile": {"display_name": "Kartik"}}
+        }
+
+        event = {
+            "user": "U123",
+            "channel": "C456",
+            "text": "check this video",
+            "files": [
+                {
+                    "mimetype": "video/mp4",
+                    "url_private_download": "https://files.slack.com/clip.mp4",
+                    "name": "screen_recording.mp4",
+                    "size": 1048576,
+                }
+            ],
+        }
+
+        asyncio.run(slack_channel._dispatch(event, mock_client))
+
+        msg = slack_channel._on_message.call_args[0][0]
+        assert msg.audio_data is None
+
+
 class TestSlackVoiceSend:
     def test_send_with_audio_uploads_file(self, slack_channel):
         """Outbound message with audio should upload a file."""

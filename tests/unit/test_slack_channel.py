@@ -122,6 +122,34 @@ class TestSlackChannel:
         }
         assert ch._should_skip(event) is False
 
+    async def test_does_not_skip_file_share(self):
+        from jarvis.channels.slack import SlackChannel
+
+        ch = SlackChannel(bot_token="xoxb-test", app_token="xapp-test")
+
+        event = {
+            "user": "U123",
+            "text": "",
+            "channel": "D456",
+            "subtype": "file_share",
+            "files": [{"mimetype": "audio/webm"}],
+        }
+        assert ch._should_skip(event) is False
+
+    async def test_skips_other_subtypes(self):
+        from jarvis.channels.slack import SlackChannel
+
+        ch = SlackChannel(bot_token="xoxb-test", app_token="xapp-test")
+
+        for subtype in ("channel_join", "channel_leave", "thread_broadcast"):
+            event = {
+                "user": "U123",
+                "text": "",
+                "channel": "D456",
+                "subtype": subtype,
+            }
+            assert ch._should_skip(event) is True
+
     async def test_send_calls_chat_post_message(self):
         from jarvis.channels.base import ChannelType, OutboundMessage
         from jarvis.channels.slack import SlackChannel

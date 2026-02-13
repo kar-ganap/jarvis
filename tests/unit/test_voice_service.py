@@ -67,6 +67,11 @@ class TestMimeToExtension:
 
         assert _mime_to_extension("audio/unknown") == ".ogg"
 
+    def test_video_mp4(self):
+        from jarvis.voice.service import _mime_to_extension
+
+        assert _mime_to_extension("video/mp4") == ".mp4"
+
 
 class TestTranscribe:
     def test_calls_openai_api(self):

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import tempfile
 from collections.abc import Iterator
-from pathlib import Path
 
 import openai
 import structlog
@@ -19,6 +17,7 @@ _MIME_EXTENSIONS: dict[str, str] = {
     "audio/m4a": ".m4a",
     "audio/webm": ".webm",
     "audio/flac": ".flac",
+    "video/mp4": ".mp4",
 }
 
 
@@ -49,14 +48,11 @@ class VoiceService:
             raise ValueError("Cannot transcribe empty audio data")
 
         ext = _mime_to_extension(mime_type)
-        with tempfile.NamedTemporaryFile(suffix=ext, delete=True) as tmp:
-            tmp.write(audio_data)
-            tmp.flush()
-            with Path(tmp.name).open("rb") as f:
-                response = self._client.audio.transcriptions.create(
-                    model=self._stt_model,
-                    file=f,
-                )
+        filename = f"audio{ext}"
+        response = self._client.audio.transcriptions.create(
+            model=self._stt_model,
+            file=(filename, audio_data),
+        )
         log.info("voice.transcribed", length=len(audio_data), mime=mime_type)
         return response.text
 
