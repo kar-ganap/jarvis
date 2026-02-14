@@ -4,14 +4,14 @@ import asyncio
 
 import structlog
 
-from jarvis.agent.response import extract_assistant_text
+from jarvis.agent.response import extract_assistant_text, extract_tool_calls
 from jarvis.channels.base import (
     Channel,
     ChannelMessage,
     ChannelType,
     OutboundMessage,
 )
-from jarvis.monitoring.metrics import MESSAGE_COUNT
+from jarvis.monitoring.metrics import MESSAGE_COUNT, TOOL_INVOCATION_COUNT
 
 log = structlog.get_logger()
 
@@ -70,6 +70,9 @@ class MessageRouter:
                 agent_id=self._agent_id,
                 messages=[{"role": "user", "content": prefixed}],
             )
+
+        for tc in extract_tool_calls(response):
+            TOOL_INVOCATION_COUNT.labels(tool_name=tc["tool_name"]).inc()
 
         reply_text = extract_assistant_text(response)
         if not reply_text:

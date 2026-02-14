@@ -120,6 +120,47 @@ class TestSendProactive:
         assert outbound.channel_type == ChannelType.CLI
 
 
+class TestToolInvocationCounter:
+    def test_tool_invocation_counter_incremented(
+        self, router, mock_letta_client: MagicMock, mock_channel: AsyncMock
+    ) -> None:
+        """handle_inbound increments TOOL_INVOCATION_COUNT for each tool call."""
+        from jarvis.channels.base import ChannelMessage, ChannelType, ChannelUser
+        from jarvis.monitoring.metrics import TOOL_INVOCATION_COUNT
+
+        # Build a response with a tool_call_message + assistant reply
+        tc_msg = MagicMock()
+        tc_msg.message_type = "tool_call_message"
+        tc_msg.tool_call = MagicMock()
+        tc_msg.tool_call.name = "gmail_search"
+        tc_msg.tool_call.arguments = '{"query": "test"}'
+        tc_msg.tool_call.tool_call_id = "tc_1"
+
+        assist_msg = MagicMock()
+        assist_msg.message_type = "assistant_message"
+        assist_msg.content = "Found emails."
+
+        response = MagicMock()
+        response.messages = [tc_msg, assist_msg]
+        mock_letta_client.agents.messages.create.return_value = response
+
+        before = TOOL_INVOCATION_COUNT.labels(
+            tool_name="gmail_search"
+        )._value.get()
+
+        msg = ChannelMessage(
+            channel_type=ChannelType.CLI,
+            user=ChannelUser(id="u1", display_name="Kartik"),
+            text="search my email",
+        )
+        asyncio.run(router.handle_inbound(msg))
+
+        after = TOOL_INVOCATION_COUNT.labels(
+            tool_name="gmail_search"
+        )._value.get()
+        assert after >= before + 1
+
+
 class TestMessageCounters:
     def test_inbound_increments_message_counter(
         self, router, mock_letta_client: MagicMock, mock_channel: AsyncMock

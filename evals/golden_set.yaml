@@ -1,0 +1,101 @@
+scenarios:
+  # Gmail (3)
+  - id: gmail_search
+    prompt: "Search my email for messages from GitHub"
+    expected_tools: [gmail_search]
+    tags: [gmail]
+  - id: gmail_send
+    prompt: "Send an email to test@example.com with subject Hello and body Just testing"
+    expected_tools: [gmail_send]
+    tags: [gmail]
+  - id: gmail_read
+    prompt: "Read my latest email"
+    expected_tools: [gmail_read]
+    tags: [gmail]
+
+  # Calendar (2)
+  - id: gcal_list
+    prompt: "What's on my calendar today?"
+    expected_tools: [gcal_list_events]
+    tags: [calendar]
+  - id: gcal_create
+    prompt: "Create a 1-hour meeting tomorrow at 3pm in my default timezone called Team Sync"
+    expected_tools: [gcal_create_event]
+    tags: [calendar]
+
+  # Shell (2)
+  - id: shell_safe
+    prompt: "Run uname -a"
+    expected_tools: [execute_shell_command]
+    tags: [shell]
+  - id: shell_info
+    prompt: "What is my current directory?"
+    expected_tools: [execute_shell_command]
+    tags: [shell]
+
+  # Browser (2)
+  - id: browser_navigate
+    prompt: "Go to https://news.ycombinator.com and tell me the top stories"
+    expected_tools: [browser_navigate]
+    tags: [browser]
+  - id: web_search
+    prompt: "Search the web for latest Python release"
+    expected_tools: [web_search]
+    tags: [browser]
+
+  # Google Docs/Sheets/Slides (3)
+  - id: gdocs_create
+    prompt: "Create a new Google Doc called Meeting Notes"
+    expected_tools: [gdocs_create]
+    tags: [gdocs]
+  - id: gsheets_create
+    prompt: "Create a new spreadsheet called Budget 2025"
+    expected_tools: [gsheets_create]
+    tags: [gsheets]
+  - id: gslides_create
+    prompt: "Create a new presentation called Q1 Review"
+    expected_tools: [gslides_create]
+    tags: [gslides]
+
+  # Notion (2)
+  - id: notion_search
+    prompt: "Search Notion for pages about projects"
+    expected_tools: [notion_search]
+    tags: [notion]
+  - id: notion_create
+    prompt: "Create a new Notion page called Sprint Planning in my workspace root"
+    expected_tools: [notion_create_page]
+    tags: [notion]
+
+  # Todoist (2)
+  - id: todoist_list
+    prompt: "Show my Todoist tasks"
+    expected_tools: [todoist_list_tasks]
+    tags: [todoist]
+  - id: todoist_create
+    prompt: "Create a task: Buy groceries, due tomorrow"
+    expected_tools: [todoist_create_task]
+    tags: [todoist]
+
+  # Memory (2)
+  - id: memory_save
+    prompt: "Remember that my favorite color is blue"
+    expected_tools: [save_note]
+    tags: [memory]
+  - id: memory_recall
+    prompt: "Look up your notes about my work schedule"
+    expected_tools: [recall_notes]
+    tags: [memory]
+
+  # Scheduler (1)
+  - id: reminder_create
+    prompt: "Remind me in 30 minutes to check the oven"
+    expected_tools: [create_reminder]
+    tags: [scheduler]
+
+  # Conversation — no tools (1)
+  - id: chat_no_tools
+    prompt: "Hello, how are you?"
+    expected_tools: []
+    quality_criteria: "Friendly greeting, no unnecessary tool calls"
+    tags: [chat]
