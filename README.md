@@ -240,7 +240,7 @@ All sensitive values (API keys, tokens) come from environment variables, not the
 ## Development
 
 ```bash
-make test          # Run unit tests (287 tests)
+make test          # Run unit tests (308 tests)
 make test-all      # Run all tests including integration
 make lint          # Ruff linting
 make typecheck     # mypy strict mode
@@ -266,7 +266,7 @@ jarvis/
 │   ├── monitoring/     # Prometheus metrics, middleware
 │   ├── agent/          # Persona, Letta helpers
 │   └── http_server.py  # 42-endpoint internal bridge
-├── tests/              # 303 tests (287 unit + 16 integration)
+├── tests/              # 324 tests (308 unit + 16 integration)
 ├── bridge/whatsapp/    # Node.js Baileys bridge
 ├── config/             # YAML configuration
 ├── scripts/            # Setup and validation scripts
