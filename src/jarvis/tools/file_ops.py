@@ -1,5 +1,23 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
+
+def _validate_path(path: str) -> str | None:
+    """Resolve path and verify it's under the home directory.
+
+    Returns the resolved path string, or None if outside home.
+    """
+    home = Path(os.path.expanduser("~")).resolve()
+    if os.path.isabs(path):
+        resolved = Path(path).resolve()
+    else:
+        resolved = (home / path).resolve()
+    if not str(resolved).startswith(str(home)):
+        return None
+    return str(resolved)
+
 
 def read_file(path: str) -> str:
     """Read the contents of a text file.
@@ -10,10 +28,10 @@ def read_file(path: str) -> str:
     Returns:
         The file contents, or an error message if the file cannot be read.
     """
-    import os
-
-    if not os.path.isabs(path):
-        path = os.path.join(os.path.expanduser("~"), path)
+    safe_path = _validate_path(path)
+    if safe_path is None:
+        return f"BLOCKED: Path outside home directory: {path}"
+    path = safe_path
 
     if not os.path.exists(path):
         return f"ERROR: File not found: {path}"
@@ -36,10 +54,10 @@ def write_file(path: str, content: str) -> str:
     Returns:
         A confirmation message or error.
     """
-    import os
-
-    if not os.path.isabs(path):
-        path = os.path.join(os.path.expanduser("~"), path)
+    safe_path = _validate_path(path)
+    if safe_path is None:
+        return f"BLOCKED: Path outside home directory: {path}"
+    path = safe_path
 
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
@@ -57,9 +75,11 @@ def list_directory(path: str = "~") -> str:
     Returns:
         A formatted listing of files and directories.
     """
-    import os
+    safe_path = _validate_path(path)
+    if safe_path is None:
+        return f"BLOCKED: Path outside home directory: {path}"
+    path = safe_path
 
-    path = os.path.expanduser(path)
     if not os.path.isdir(path):
         return f"ERROR: Not a directory: {path}"
 

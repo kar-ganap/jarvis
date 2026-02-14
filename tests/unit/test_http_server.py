@@ -355,6 +355,128 @@ class TestSlidesEndpoints:
         assert "id" in data
 
 
+class TestAuthMiddleware:
+    """Tests for bearer token auth on HTTP bridge."""
+
+    async def test_unauthenticated_request_returns_401(self, aiohttp_client):
+        """POST to protected endpoint without token → 401."""
+        from jarvis.http_server import InternalServer
+
+        with patch("jarvis.http_server.google_handlers"), \
+             patch("jarvis.http_server.slides_handlers"), \
+             patch("jarvis.http_server.notion_handlers"), \
+             patch("jarvis.http_server.browser_handlers"):
+            server = InternalServer(
+                router=AsyncMock(),
+                scheduler=MagicMock(),
+                trigger=AsyncMock(),
+                port=0,
+                auth_token="test-secret",
+            )
+            app = server._build_app()
+            client = await aiohttp_client(app)
+
+        resp = await client.post(
+            "/outbound",
+            json={"channel": "slack", "recipient_id": "C1", "text": "hi"},
+        )
+        assert resp.status == 401
+
+    async def test_valid_token_allows_request(self, aiohttp_client):
+        """POST with correct Bearer token → 200."""
+        from jarvis.http_server import InternalServer
+
+        mock_router = AsyncMock()
+        with patch("jarvis.http_server.google_handlers"), \
+             patch("jarvis.http_server.slides_handlers"), \
+             patch("jarvis.http_server.notion_handlers"), \
+             patch("jarvis.http_server.browser_handlers"):
+            server = InternalServer(
+                router=mock_router,
+                scheduler=MagicMock(),
+                trigger=AsyncMock(),
+                port=0,
+                auth_token="test-secret",
+            )
+            app = server._build_app()
+            client = await aiohttp_client(app)
+
+        resp = await client.post(
+            "/outbound",
+            json={"channel": "slack", "recipient_id": "C1", "text": "hi"},
+            headers={"Authorization": "Bearer test-secret"},
+        )
+        assert resp.status == 200
+
+    async def test_wrong_token_returns_401(self, aiohttp_client):
+        """POST with wrong token → 401."""
+        from jarvis.http_server import InternalServer
+
+        with patch("jarvis.http_server.google_handlers"), \
+             patch("jarvis.http_server.slides_handlers"), \
+             patch("jarvis.http_server.notion_handlers"), \
+             patch("jarvis.http_server.browser_handlers"):
+            server = InternalServer(
+                router=AsyncMock(),
+                scheduler=MagicMock(),
+                trigger=AsyncMock(),
+                port=0,
+                auth_token="test-secret",
+            )
+            app = server._build_app()
+            client = await aiohttp_client(app)
+
+        resp = await client.post(
+            "/outbound",
+            json={"channel": "slack", "recipient_id": "C1", "text": "hi"},
+            headers={"Authorization": "Bearer wrong-token"},
+        )
+        assert resp.status == 401
+
+    async def test_health_exempt_from_auth(self, aiohttp_client):
+        """GET /health works without token even when auth is configured."""
+        from jarvis.http_server import InternalServer
+
+        with patch("jarvis.http_server.google_handlers"), \
+             patch("jarvis.http_server.slides_handlers"), \
+             patch("jarvis.http_server.notion_handlers"), \
+             patch("jarvis.http_server.browser_handlers"):
+            server = InternalServer(
+                router=AsyncMock(),
+                scheduler=MagicMock(),
+                trigger=AsyncMock(),
+                port=0,
+                auth_token="test-secret",
+            )
+            app = server._build_app()
+            client = await aiohttp_client(app)
+
+        resp = await client.get("/health")
+        assert resp.status == 200
+
+    async def test_metrics_exempt_from_auth(self, aiohttp_client):
+        """GET /metrics works without token even when auth is configured."""
+        from jarvis.http_server import InternalServer
+
+        with patch("jarvis.http_server.google_handlers"), \
+             patch("jarvis.http_server.slides_handlers"), \
+             patch("jarvis.http_server.notion_handlers"), \
+             patch("jarvis.http_server.browser_handlers"):
+            server = InternalServer(
+                router=AsyncMock(),
+                scheduler=MagicMock(),
+                trigger=AsyncMock(),
+                port=0,
+                auth_token="test-secret",
+                metrics_enabled=True,
+            )
+            app = server._build_app()
+            client = await aiohttp_client(app)
+
+        resp = await client.get("/metrics")
+        assert resp.status == 200
+
+
 class TestGoogleEndpoints:
     async def test_gmail_search_endpoint(self, test_client):
         resp = await test_client.post(
