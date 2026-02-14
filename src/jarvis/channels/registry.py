@@ -37,6 +37,7 @@ class ChannelRegistry:
             channels[ChannelType.WHATSAPP] = WhatsAppChannel(
                 bridge_url=settings.whatsapp.bridge_url,
                 allow_groups=settings.whatsapp.allow_groups,
+                allowed_senders=settings.whatsapp.allowed_senders,
             )
             log.info("registry.whatsapp_enabled")
 

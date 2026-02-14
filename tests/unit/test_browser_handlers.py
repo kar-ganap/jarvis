@@ -105,6 +105,29 @@ class TestBrowserExtract:
         mock_page.close.assert_called_once()
 
 
+class TestUrlValidation:
+    def test_http_url_allowed(self):
+        from jarvis.browser.handlers import _validate_url
+
+        assert _validate_url("https://example.com") == "https://example.com"
+
+    def test_file_url_blocked(self):
+        import pytest
+
+        from jarvis.browser.handlers import _validate_url
+
+        with pytest.raises(ValueError, match="scheme"):
+            _validate_url("file:///etc/passwd")
+
+    def test_localhost_blocked(self):
+        import pytest
+
+        from jarvis.browser.handlers import _validate_url
+
+        with pytest.raises(ValueError, match="blocked"):
+            _validate_url("http://localhost:8283/v1/agents")
+
+
 class TestBrowserLazyInit:
     def test_reuses_existing_context(self):
         from jarvis.browser import handlers

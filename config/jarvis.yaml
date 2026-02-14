@@ -19,11 +19,13 @@ slack:
 http:
   port: 9100
   host: "0.0.0.0"
+  auth_token: ""  # Set via JARVIS_HTTP_AUTH_TOKEN env var
 
 whatsapp:
   enabled: true
   bridge_url: "http://localhost:9120"
   allow_groups: false
+  allowed_senders: []  # Empty = allow all. Set JIDs to restrict.
 
 google:
   client_secrets_path: "gcp_oauth_client_id.json"

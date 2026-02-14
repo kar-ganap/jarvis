@@ -38,6 +38,7 @@ class InternalServer:
         channel_names: list[str] | None = None,
         tool_count: int = 0,
         metrics_enabled: bool = True,
+        auth_token: str = "",
     ) -> None:
         self._router = router
         self._scheduler = scheduler
@@ -49,10 +50,23 @@ class InternalServer:
         self._channel_names = channel_names or []
         self._tool_count = tool_count
         self._metrics_enabled = metrics_enabled
+        self._auth_token = auth_token
 
     def _build_app(self) -> web.Application:
         """Build the aiohttp Application (separated for testability)."""
-        app = web.Application(middlewares=[observability_middleware])
+        middlewares = [observability_middleware]
+        if self._auth_token:
+            @web.middleware
+            async def auth_middleware(request, handler):
+                exempt = {"/health", "/metrics"}
+                if request.path in exempt:
+                    return await handler(request)
+                auth = request.headers.get("Authorization", "")
+                if auth != f"Bearer {self._auth_token}":
+                    return web.json_response({"error": "unauthorized"}, status=401)
+                return await handler(request)
+            middlewares.append(auth_middleware)
+        app = web.Application(middlewares=middlewares, client_max_size=2 * 1024 * 1024)
         routes = [
             web.get("/health", self._health),
             web.post("/outbound", self._outbound),

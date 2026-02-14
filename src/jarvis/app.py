@@ -90,6 +90,7 @@ class JarvisApp:
             channel_names=channel_names,
             tool_count=tool_count,
             metrics_enabled=self.settings.monitoring.metrics_enabled,
+            auth_token=self.settings.http.auth_token,
         )
 
         # Start HTTP server + all channels concurrently

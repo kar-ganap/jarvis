@@ -34,12 +34,14 @@ class SlackSettings(BaseModel):
 class HttpSettings(BaseModel):
     port: int = 9100
     host: str = "0.0.0.0"
+    auth_token: str = ""
 
 
 class WhatsAppSettings(BaseModel):
     enabled: bool = False
     bridge_url: str = "http://localhost:9120"
     allow_groups: bool = False
+    allowed_senders: list[str] = []
 
 
 class GoogleSettings(BaseModel):
@@ -132,13 +134,24 @@ def load_settings(config_path: Path | None = None) -> JarvisSettings:
     if not voice.openai_api_key:
         voice.openai_api_key = os.environ.get("OPENAI_API_KEY", "")
 
+    http_raw = raw.get("http") or {}
+    http = HttpSettings(**http_raw)
+    if not http.auth_token:
+        http.auth_token = os.environ.get("JARVIS_HTTP_AUTH_TOKEN", "")
+
+    whatsapp_raw = raw.get("whatsapp") or {}
+    whatsapp = WhatsAppSettings(**whatsapp_raw)
+    env_senders = os.environ.get("WHATSAPP_ALLOWED_SENDERS", "")
+    if not whatsapp.allowed_senders and env_senders:
+        whatsapp.allowed_senders = [s.strip() for s in env_senders.split(",") if s.strip()]
+
     return JarvisSettings(
         letta=LettaSettings(**(raw.get("letta") or {})),
         agent=AgentSettings(**(raw.get("agent") or {})),
         user=UserSettings(**(raw.get("user") or {})),
         slack=slack,
-        http=HttpSettings(**(raw.get("http") or {})),
-        whatsapp=WhatsAppSettings(**(raw.get("whatsapp") or {})),
+        http=http,
+        whatsapp=whatsapp,
         google=GoogleSettings(**(raw.get("google") or {})),
         todoist=todoist,
         voice=voice,

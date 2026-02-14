@@ -1,5 +1,30 @@
 from __future__ import annotations
 
+import re
+
+import structlog
+
+_log = structlog.get_logger()
+
+_BLOCKED_PATTERNS = [
+    r"\brm\s+(-[a-zA-Z]*r|-[a-zA-Z]*f)+",
+    r"\bmkfs\b",
+    r"\bdd\s+.*of=/dev/",
+    r":\(\)\s*\{",
+    r">\s*/dev/[sh]d",
+    r"\bchmod\s+777\s+/",
+    r"\bshutdown\b",
+    r"\breboot\b",
+]
+
+
+def _is_blocked(command: str) -> bool:
+    """Check if command matches any blocked pattern."""
+    for pattern in _BLOCKED_PATTERNS:
+        if re.search(pattern, command):
+            return True
+    return False
+
 
 def execute_shell_command(command: str, workdir: str = "") -> str:
     """Execute a shell command and return the output.
@@ -15,6 +40,10 @@ def execute_shell_command(command: str, workdir: str = "") -> str:
     import subprocess
 
     workdir = workdir or os.path.expanduser("~")
+
+    if _is_blocked(command):
+        _log.warning("shell.command_blocked", command=command)
+        return f"BLOCKED: Command rejected by safety filter: {command}"
 
     # Filter sensitive env vars
     env = {

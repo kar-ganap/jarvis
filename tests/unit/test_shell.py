@@ -40,3 +40,30 @@ class TestExecuteShellCommand:
 
         result = execute_shell_command("pwd", workdir=str(tmp_path))
         assert str(tmp_path) in result
+
+
+class TestCommandSafety:
+    def test_rejects_rm_rf(self):
+        from jarvis.tools.shell import execute_shell_command
+
+        result = execute_shell_command("rm -rf /")
+        assert "BLOCKED" in result
+
+    def test_rejects_fork_bomb(self):
+        from jarvis.tools.shell import execute_shell_command
+
+        result = execute_shell_command(":(){ :|:& };:")
+        assert "BLOCKED" in result
+
+    def test_rejects_dev_write(self):
+        from jarvis.tools.shell import execute_shell_command
+
+        result = execute_shell_command("dd if=/dev/zero of=/dev/sda")
+        assert "BLOCKED" in result
+
+    def test_allows_safe_commands(self):
+        from jarvis.tools.shell import execute_shell_command
+
+        result = execute_shell_command("echo hello && ls")
+        assert "hello" in result
+        assert "BLOCKED" not in result

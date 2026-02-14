@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import uuid
+from urllib.parse import urlparse
 
 from playwright.sync_api import sync_playwright
 
@@ -10,6 +11,24 @@ _browser = None
 _context = None
 
 _MAX_TEXT_LENGTH = 10000
+
+_BLOCKED_HOSTS = (
+    "localhost", "127.0.0.1", "169.254.169.254", "0.0.0.0", "[::1]",
+)
+_PRIVATE_PREFIXES = tuple(
+    f"172.{i}." for i in range(16, 32)
+) + ("10.", "192.168.")
+
+
+def _validate_url(url: str) -> str:
+    """Validate URL scheme and host. Raises ValueError if blocked."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"Unsupported URL scheme: {parsed.scheme}")
+    hostname = parsed.hostname or ""
+    if hostname in _BLOCKED_HOSTS or hostname.startswith(_PRIVATE_PREFIXES):
+        raise ValueError(f"URL host blocked (private/internal): {hostname}")
+    return url
 
 
 def _ensure_browser():
@@ -25,6 +44,7 @@ def _ensure_browser():
 
 def browser_navigate(url: str) -> dict:
     """Navigate to URL and return page title and text content."""
+    _validate_url(url)
     context = _ensure_browser()
     page = context.new_page()
     try:
@@ -40,6 +60,7 @@ def browser_navigate(url: str) -> dict:
 
 def browser_screenshot(url: str) -> dict:
     """Take a screenshot of the URL and return the file path."""
+    _validate_url(url)
     context = _ensure_browser()
     page = context.new_page()
     try:
@@ -54,6 +75,7 @@ def browser_screenshot(url: str) -> dict:
 
 def browser_extract(url: str, selector: str) -> dict:
     """Extract text from elements matching a CSS selector."""
+    _validate_url(url)
     context = _ensure_browser()
     page = context.new_page()
     try:

@@ -21,9 +21,15 @@ log = structlog.get_logger()
 class WhatsAppChannel(Channel):
     """WhatsApp channel via Node.js Baileys bridge."""
 
-    def __init__(self, bridge_url: str, allow_groups: bool = False) -> None:
+    def __init__(
+        self,
+        bridge_url: str,
+        allow_groups: bool = False,
+        allowed_senders: list[str] | None = None,
+    ) -> None:
         self._bridge_url = bridge_url.rstrip("/")
         self._allow_groups = allow_groups
+        self._allowed_senders = allowed_senders or []
         self._on_message: InboundHandler | None = None
         self._session: aiohttp.ClientSession | None = None
 
@@ -93,8 +99,12 @@ class WhatsAppChannel(Channel):
         # Decode audio if present
         audio_data = None
         audio_mime = None
-        if data.get("audio_data"):
-            audio_data = base64.b64decode(data["audio_data"])
+        raw_b64 = data.get("audio_data", "")
+        if raw_b64:
+            if len(raw_b64) > 7_000_000:  # ~5MB decoded
+                log.warning("whatsapp.audio_too_large", size=len(raw_b64))
+                return
+            audio_data = base64.b64decode(raw_b64)
             audio_mime = data.get("audio_mime", "audio/ogg")
 
         msg = ChannelMessage(
@@ -121,6 +131,9 @@ class WhatsAppChannel(Channel):
         if data.get("is_status", False):
             return True
         if data.get("is_group", False) and not self._allow_groups:
+            return True
+        if self._allowed_senders and data.get("sender", "") not in self._allowed_senders:
+            log.warning("whatsapp.sender_blocked", sender=data.get("sender", ""))
             return True
         return False
 

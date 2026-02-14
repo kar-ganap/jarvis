@@ -132,3 +132,33 @@ class TestWhatsAppChannel:
         ch = WhatsAppChannel(bridge_url="http://localhost:9120")
         data = {"text": "hello", "is_group": False, "is_status": False}
         assert ch._should_skip(data) is False
+
+
+class TestSenderAllowlist:
+    def test_allowed_sender_passes(self):
+        from jarvis.channels.whatsapp import WhatsAppChannel
+
+        channel = WhatsAppChannel(
+            "http://bridge:9120", allowed_senders=["919876@s.whatsapp.net"],
+        )
+        assert not channel._should_skip(
+            {"text": "hi", "sender": "919876@s.whatsapp.net"},
+        )
+
+    def test_blocked_sender_rejected(self):
+        from jarvis.channels.whatsapp import WhatsAppChannel
+
+        channel = WhatsAppChannel(
+            "http://bridge:9120", allowed_senders=["919876@s.whatsapp.net"],
+        )
+        assert channel._should_skip(
+            {"text": "hi", "sender": "unknown@s.whatsapp.net"},
+        )
+
+    def test_empty_allowlist_allows_all(self):
+        from jarvis.channels.whatsapp import WhatsAppChannel
+
+        channel = WhatsAppChannel("http://bridge:9120", allowed_senders=[])
+        assert not channel._should_skip(
+            {"text": "hi", "sender": "anyone@s.whatsapp.net"},
+        )
